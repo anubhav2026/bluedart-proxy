@@ -1,5 +1,3 @@
-cd ~/Desktop/bluedart-proxy
-cat > proxy-server.js << 'EOF'
 const express = require("express");
 const path = require("path");
 const app = express();
@@ -29,7 +27,7 @@ app.post("/v1/company/bluedart/search-job-query", async (req, res) => {
         headers: {
           "Content-Type": "application/json",
           "accept": "application/json, text/plain, */*",
-          "Cookie": `access=${ACCESS_TOKEN}; refresh=${REFRESH_TOKEN}`,
+          "Cookie": "access=" + ACCESS_TOKEN + "; refresh=" + REFRESH_TOKEN,
           "origin": "https://bluedart.hunar.ai",
           "referer": "https://bluedart.hunar.ai/",
           "user-agent": "Mozilla/5.0",
@@ -56,7 +54,7 @@ const refreshAccessToken = async () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Cookie": `refresh=${REFRESH_TOKEN}`,
+        "Cookie": "refresh=" + REFRESH_TOKEN,
         "origin": "https://bluedart.hunar.ai",
         "referer": "https://bluedart.hunar.ai/",
       },
@@ -79,9 +77,4 @@ app.post("/set-tokens", (req, res) => {
 app.get("/health", (_, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 const PORT = process.env.PORT || 3131;
-app.listen(PORT, () => console.log(`Blue Dart proxy running on port ${PORT}`));
-EOF
-
-git add proxy-server.js
-git commit -m "Serve dashboard from separate HTML file"
-git push origin main
+app.listen(PORT, () => console.log("Blue Dart proxy running on port " + PORT));
