@@ -290,7 +290,7 @@ function computeStats(data,total){
   document.getElementById("s-selected").textContent=sel.toLocaleString();
   document.getElementById("s-selected-pct").textContent=leads?Math.round(sel/leads*100)+"% hired":"-";
   const now=new Date();
-  document.getElementById("topbar-info").innerHTML="Updated "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" &middot; <b>"+total+" active JQs<\/b>";
+  document.getElementById("topbar-info").innerHTML="Updated "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" .; <b>"+total+" active JQs<\/b>";
 }
 function renderFunnel(data){
   const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),qualified=sumSC(data,"QUALIFIED")||sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),sel=sumSC(data,"COMPANY_APPROVED")||sumSC(data,"SELECTED");
