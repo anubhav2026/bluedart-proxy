@@ -32,7 +32,7 @@ app.post("/v1/company/bluedart/search-job-query", async (req, res) => {
           "Cookie": `access=${ACCESS_TOKEN}; refresh=${REFRESH_TOKEN}`,
           "origin": "https://bluedart.hunar.ai",
           "referer": "https://bluedart.hunar.ai/",
-          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/146.0.0.0 Safari/537.36",
+          "user-agent": "Mozilla/5.0",
         },
         body: JSON.stringify(req.body),
       });
@@ -44,7 +44,7 @@ app.post("/v1/company/bluedart/search-job-query", async (req, res) => {
       const data = await response.json();
       return res.json(data);
     }
-    res.status(401).json({ error: "Auth failed. Update ACCESS_TOKEN in Render environment variables." });
+    res.status(401).json({ error: "Auth failed." });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
