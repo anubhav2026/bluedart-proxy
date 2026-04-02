@@ -14,36 +14,420 @@ app.use(express.json());
 let ACCESS_TOKEN = process.env.ACCESS_TOKEN || "";
 let REFRESH_TOKEN = process.env.REFRESH_TOKEN || "";
 
-app.post("/api/bluedart", async (req, res) => {
+app.get("/", (req, res) => res.send(getDashboardHTML()));
+
+app.post("/v1/company/bluedart/search-job-query", async (req, res) => {
   try {
-    const response = await fetch("https://api.hunar.ai/v1/company/bluedart/search-job-query", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "accept": "application/json, text/plain, */*",
-        "Cookie": `access=${ACCESS_TOKEN}; refresh=${REFRESH_TOKEN}`,
-        "origin": "https://bluedart.hunar.ai",
-        "referer": "https://bluedart.hunar.ai/",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/146.0.0.0 Safari/537.36",
-      },
-      body: JSON.stringify(req.body),
-    });
-    const data = await response.json();
-    res.json(data);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await fetch("https://api.hunar.ai/v1/company/bluedart/search-job-query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "accept": "application/json, text/plain, */*",
+          "Cookie": `access=${ACCESS_TOKEN}; refresh=${REFRESH_TOKEN}`,
+          "origin": "https://bluedart.hunar.ai",
+          "referer": "https://bluedart.hunar.ai/",
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/146.0.0.0 Safari/537.36",
+        },
+        body: JSON.stringify(req.body),
+      });
+      if (response.status === 401 && attempt === 0) {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) break;
+        continue;
+      }
+      const data = await response.json();
+      return res.json(data);
+    }
+    res.status(401).json({ error: "Auth failed. Update ACCESS_TOKEN in Render environment variables." });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
+const refreshAccessToken = async () => {
+  try {
+    const res = await fetch("https://api.hunar.ai/v1/auth/refresh", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cookie": `refresh=${REFRESH_TOKEN}`,
+        "origin": "https://bluedart.hunar.ai",
+        "referer": "https://bluedart.hunar.ai/",
+      },
+    });
+    const setCookie = res.headers.get("set-cookie") || "";
+    const match = setCookie.match(/access=([^;]+)/);
+    if (match) { ACCESS_TOKEN = match[1]; console.log("Token refreshed:", new Date().toISOString()); return true; }
+    return false;
+  } catch { return false; }
+};
+
 app.post("/set-tokens", (req, res) => {
   const { access, refresh, secret } = req.body;
   if (secret !== process.env.ADMIN_SECRET) return res.status(403).json({ error: "Invalid secret" });
-  if (access) ACCESS_TOKEN = access;
-  if (refresh) REFRESH_TOKEN = refresh;
+  if (access) { ACCESS_TOKEN = access; console.log("Access token updated"); }
+  if (refresh) { REFRESH_TOKEN = refresh; console.log("Refresh token updated"); }
   res.json({ ok: true });
 });
 
 app.get("/health", (_, res) => res.json({ ok: true, time: new Date().toISOString() }));
+
+function getDashboardHTML() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Blue Dart — Job Query Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f4fa;color:#1a2a3a;font-size:14px}
+a{color:inherit;text-decoration:none}
+.topbar{background:#003399;padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,51,153,.3)}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.brand{font-size:18px;font-weight:800;letter-spacing:.5px}
+.brand .blue{color:#fff}.brand .green{color:#66ff66}
+.divider{color:#ffffff44;font-size:20px}
+.page-title{font-size:13px;color:#aabddd}
+.topbar-center{font-size:12px;color:#aabddd}
+.topbar-center b{color:#fff}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.auto-badge{background:#002277;border:1px solid #0044bb;border-radius:20px;padding:5px 14px;font-size:12px;color:#aabddd;cursor:pointer}
+.btn-refresh{background:#009900;color:white;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-refresh:hover{background:#00bb00}
+.token-bar{background:#e8eef8;border-bottom:1px solid #ccd8ee;padding:8px 24px;cursor:pointer;font-size:12px;color:#6688aa;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.token-bar input{background:#fff;border:1px solid #b0c4de;border-radius:6px;padding:6px 10px;color:#333;font-size:12px;width:560px;margin-top:4px;display:none;outline:none}
+.token-bar.open input{display:block}
+.main{padding:20px 24px;max-width:1400px;margin:0 auto}
+.stat-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.stat-card{background:#fff;border:1px solid #d0ddf0;border-radius:10px;padding:16px 20px;flex:1;min-width:130px;box-shadow:0 1px 4px rgba(0,51,153,.06)}
+.stat-card .label{font-size:11px;color:#7799bb;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.stat-card .value{font-size:26px;font-weight:700}
+.stat-card .sub{font-size:12px;color:#99aabb;margin-top:4px}
+.c-navy{color:#003399}.c-blue{color:#0055cc}.c-green{color:#009900}.c-purple{color:#6633cc}.c-orange{color:#cc6600}.c-teal{color:#007788}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-card{background:#fff;border:1px solid #d0ddf0;border-radius:10px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,51,153,.06)}
+.chart-card h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#7799bb;margin-bottom:4px;font-weight:600}
+.chart-card .subtitle{font-size:11px;color:#aabbcc;margin-bottom:14px}
+.region-layout{display:flex;gap:16px;align-items:flex-start}
+.donut-wrap{flex-shrink:0;position:relative;width:180px}
+.donut-wrap canvas{width:180px!important;height:180px!important}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.donut-center .dc-val{font-size:22px;font-weight:700;color:#003399}
+.donut-center .dc-label{font-size:10px;color:#99aabb;text-transform:uppercase;letter-spacing:.4px}
+.region-table-wrap{flex:1;min-width:0}
+.region-search{width:100%;padding:6px 10px;border:1px solid #d0ddf0;border-radius:7px;font-size:12px;outline:none;margin-bottom:8px;background:#f8faff;color:#333}
+.region-search:focus{border-color:#003399}
+.region-table{width:100%;border-collapse:collapse;font-size:12px}
+.region-table th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:#99aabb;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #eef2fa;cursor:pointer;user-select:none}
+.region-table th:hover{color:#003399}
+.region-table td{padding:6px 8px;border-bottom:1px solid #f4f7fd}
+.region-table tr:last-child td{border-bottom:none}
+.region-table tr:hover td{background:#f4f7fd;cursor:pointer}
+.region-table tr.active-region td{background:#e8eef8}
+.r-bar{height:4px;background:#e0e8f4;border-radius:2px;margin-top:3px}
+.r-bar-fill{height:100%;border-radius:2px;background:#003399}
+.r-leads-bar{height:4px;background:#e0f0e0;border-radius:2px;margin-top:2px}
+.r-leads-fill{height:100%;border-radius:2px;background:#009900}
+.region-scroll{max-height:220px;overflow-y:auto}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.section-title{font-size:14px;font-weight:700;color:#1a2a3a}
+.section-count{font-size:12px;color:#7799bb;background:#e8eef8;padding:3px 10px;border-radius:20px;margin-left:8px}
+.search-box{background:#fff;border:1px solid #ccd8ee;border-radius:8px;padding:7px 12px;color:#333;font-size:13px;width:240px;outline:none}
+.search-box:focus{border-color:#003399}
+.status-btn{padding:7px 16px;border-radius:8px;border:1px solid #ccd8ee;background:#fff;color:#6688aa;font-size:13px;font-weight:600;cursor:pointer}
+.status-btn.active{background:#003399;color:#fff;border-color:#003399}
+.table-wrap{background:#fff;border:1px solid #d0ddf0;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,51,153,.06)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:#f4f7fd}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:#7799bb;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #d0ddf0;white-space:nowrap}
+th.num{text-align:right}
+td{padding:11px 14px;border-bottom:1px solid #eef2fa;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.job-row:hover td{background:#f4f7fd;cursor:pointer}
+tr.job-row.expanded td{background:#eef2fa}
+.jq-name{font-weight:600;color:#1a2a3a;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jq-id{font-size:11px;color:#aabbcc;font-family:monospace;margin-top:2px}
+.num-cell{text-align:right;font-weight:600}
+.num-cell.zero{color:#ccddee;font-weight:400}
+.c-leads{color:#0055cc}.c-int{color:#009900}.c-qual{color:#6633cc}.c-fail{color:#cc3333}.c-int2{color:#cc6600}.c-sel{color:#007788}
+.badge-open{background:#e6f9ee;color:#007700;border:1px solid #99ddaa;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-closed{background:#fdecea;color:#cc3333;border:1px solid #ffbbbb;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.mini-bar{height:3px;background:#e0e8f4;border-radius:2px;margin-top:5px}
+.mini-bar-fill{height:100%;background:#003399;border-radius:2px}
+.detail-row td{background:#f4f7fd;padding:0}
+.detail-inner{padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.di{background:#fff;border:1px solid #d0ddf0;border-radius:8px;padding:10px 14px}
+.di .dk{font-size:10px;color:#99aabb;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;font-weight:600}
+.di .dv{font-size:13px;color:#1a2a3a;font-weight:500}
+.desc-section{padding:0 20px 18px}
+.desc-box{background:#fff;border:1px solid #d0ddf0;border-radius:8px;padding:12px 16px;font-size:12px;line-height:1.7;color:#445566;max-height:100px;overflow-y:auto}
+.pipeline-row{display:flex;gap:6px;padding:0 20px 14px;flex-wrap:wrap}
+.ps{background:#eef2fa;border:1px solid #d0ddf0;border-radius:6px;padding:5px 12px;font-size:12px;color:#6688aa}
+.ps b{color:#1a2a3a}
+.active-filter{background:#e8eef8;border:1px solid #003399;border-radius:20px;padding:4px 12px;font-size:12px;color:#003399;display:inline-flex;align-items:center;gap:6px;margin-left:8px}
+.active-filter button{background:none;border:none;cursor:pointer;color:#003399;font-size:14px;line-height:1;padding:0}
+.pagination{display:flex;justify-content:center;gap:6px;margin-top:16px;align-items:center}
+.page-btn{padding:5px 12px;border-radius:6px;border:1px solid #ccd8ee;background:#fff;cursor:pointer;font-size:13px;color:#6688aa;font-weight:500}
+.page-btn.active{background:#003399;color:white;border-color:#003399;font-weight:700}
+.page-btn:disabled{opacity:.35;cursor:not-allowed}
+.empty{padding:56px;text-align:center;color:#99aabb}
+.loading{padding:56px;text-align:center;color:#99aabb;font-size:13px}
+@media(max-width:800px){.charts-row{grid-template-columns:1fr}.region-layout{flex-direction:column}.donut-wrap{width:100%}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="brand"><span class="blue">BLUE</span>&nbsp;<span class="green">DART</span></div>
+    <div class="divider">/</div>
+    <div class="page-title">Job Query Dashboard</div>
+  </div>
+  <div class="topbar-center" id="topbar-info">Loading...</div>
+  <div class="topbar-right">
+    <div class="auto-badge" onclick="toggleAutoRefresh()" id="auto-label">Auto - every hour</div>
+    <button class="btn-refresh" onclick="refreshAll()">&#8635; Refresh</button>
+  </div>
+</div>
+<div class="token-bar" id="token-bar" onclick="toggleToken()">
+  <span>&#9658; &#128273; Auth token (update when expired)</span>
+  <input type="text" id="token-input" placeholder="Paste new access token and press Enter" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')updateToken()"/>
+</div>
+<div class="main">
+  <div class="stat-row">
+    <div class="stat-card"><div class="label">Active JQs</div><div class="value c-navy" id="s-active">-</div><div class="sub">job queries</div></div>
+    <div class="stat-card"><div class="label">Leads uploaded</div><div class="value c-blue" id="s-leads">-</div><div class="sub">total applicants</div></div>
+    <div class="stat-card"><div class="label">Interested</div><div class="value c-green" id="s-interested">-</div><div class="sub" id="s-interested-pct">-</div></div>
+    <div class="stat-card"><div class="label">Qualified</div><div class="value c-purple" id="s-qualified">-</div><div class="sub" id="s-qualified-pct">-</div></div>
+    <div class="stat-card"><div class="label">Interview</div><div class="value c-orange" id="s-interview">-</div><div class="sub" id="s-interview-pct">-</div></div>
+    <div class="stat-card"><div class="label">Selected</div><div class="value c-teal" id="s-selected">-</div><div class="sub" id="s-selected-pct">-</div></div>
+  </div>
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Funnel overview</h3>
+      <div class="subtitle">Across all open job queries</div>
+      <canvas id="funnel-chart" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Jobs by region</h3>
+      <div class="subtitle">Click a region to filter the table below</div>
+      <div class="region-layout">
+        <div class="donut-wrap">
+          <canvas id="donut-chart"></canvas>
+          <div class="donut-center">
+            <div class="dc-val" id="donut-center-val">-</div>
+            <div class="dc-label">regions</div>
+          </div>
+        </div>
+        <div class="region-table-wrap">
+          <input class="region-search" id="region-search" placeholder="Search region..." oninput="filterRegions()"/>
+          <div class="region-scroll">
+            <table class="region-table">
+              <thead><tr>
+                <th onclick="sortRegions('name')">Region</th>
+                <th onclick="sortRegions('jobs')" style="text-align:right">JQs</th>
+                <th onclick="sortRegions('leads')" style="text-align:right">Leads</th>
+              </tr></thead>
+              <tbody id="region-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section-header">
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+      <span class="section-title">All Job Queries</span>
+      <span class="section-count" id="jq-count"></span>
+      <span id="region-filter-badge" style="display:none">
+        <span class="active-filter">
+          <span id="filter-region-name"></span>
+          <button onclick="clearRegionFilter()">x</button>
+        </span>
+      </span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input class="search-box" id="search" placeholder="Search job queries..." onkeydown="if(event.key==='Enter')doSearch()" oninput="if(this.value==='')doSearch()"/>
+      <button class="status-btn active" id="btn-open" onclick="setStatus('OPEN')">Open</button>
+      <button class="status-btn" id="btn-closed" onclick="setStatus('CLOSED')">Closed</button>
+    </div>
+  </div>
+  <div class="table-wrap"><div id="table-area"><div class="loading">Loading job queries...</div></div></div>
+  <div class="pagination" id="pagination"></div>
+</div>
+<script>
+let page=1,search="",status="OPEN",selected=-1,allData=[],autoTimer=null,autoEnabled=true;
+let funnelChart=null,donutChart=null,regionData=[],regionSort={key:"jobs",dir:-1},activeRegion=null;
+const COLORS=["#003399","#0055cc","#0077ff","#009900","#00bb00","#6633cc","#9933cc","#cc6600","#007788","#cc3333","#0099cc","#336600","#993300","#006633","#330099"];
+async function api(pg,srch,st,ipp=10){
+  const r=await fetch("/v1/company/bluedart/search-job-query",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_query_status:st,page:pg,search_key:srch,items_per_page:ipp,sort:{key:"audit_metadata.updated_on",order:"desc"},filters:{}})});
+  return r.json();
+}
+function getSC(j,s){return(j.worker_status_count||[]).find(x=>x.status===s)?.count??0;}
+function sumSC(data,s){return data.reduce((a,j)=>a+getSC(j,s),0);}
+async function loadAll(){
+  try{
+    const d1=await api(1,"","OPEN",50);
+    const total=d1.pagination_info?.total??d1.total_count??50;
+    const pages=Math.min(Math.ceil(total/50),4);
+    let all=[...(d1.data||[])];
+    for(let p=2;p<=pages;p++){const dx=await api(p,"","OPEN",50);all=[...all,...(dx.data||[])];}
+    computeStats(all,total);renderFunnel(all);buildRegionData(all);renderRegionChart();renderRegionTable();
+  }catch(e){console.error(e);}
+}
+function computeStats(data,total){
+  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),qualified=sumSC(data,"QUALIFIED")||sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),sel=sumSC(data,"COMPANY_APPROVED")||sumSC(data,"SELECTED");
+  document.getElementById("s-active").textContent=total;
+  document.getElementById("s-leads").textContent=leads.toLocaleString();
+  document.getElementById("s-interested").textContent=interested.toLocaleString();
+  document.getElementById("s-interested-pct").textContent=leads?Math.round(interested/leads*100)+"% of leads":"-";
+  document.getElementById("s-qualified").textContent=qualified.toLocaleString();
+  document.getElementById("s-qualified-pct").textContent=interested?Math.round(qualified/interested*100)+"% pass rate":"-";
+  document.getElementById("s-interview").textContent=interview.toLocaleString();
+  document.getElementById("s-interview-pct").textContent=qualified?Math.round(interview/qualified*100)+"% shortlisted":"-";
+  document.getElementById("s-selected").textContent=sel.toLocaleString();
+  document.getElementById("s-selected-pct").textContent=leads?Math.round(sel/leads*100)+"% hired":"-";
+  const now=new Date();
+  document.getElementById("topbar-info").innerHTML="Updated "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" &middot; <b>"+total+" active JQs<\/b>";
+}
+function renderFunnel(data){
+  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),qualified=sumSC(data,"QUALIFIED")||sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),sel=sumSC(data,"COMPANY_APPROVED")||sumSC(data,"SELECTED");
+  if(funnelChart)funnelChart.destroy();
+  funnelChart=new Chart(document.getElementById("funnel-chart"),{type:"bar",data:{labels:["Leads","Interested","Qualified","Interview","Selected"],datasets:[{data:[leads,interested,qualified,interview,sel],backgroundColor:["#003399","#0066cc","#009900","#cc6600","#007788"],borderRadius:5,borderSkipped:false}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>" "+ctx.raw.toLocaleString()+(leads?" ("+Math.round(ctx.raw/leads*100)+"%)":"")}}},scales:{x:{grid:{color:"#eef2fa"},ticks:{color:"#99aabb"}},y:{grid:{display:false},ticks:{color:"#445566",font:{weight:"600"}}}}}});
+}
+function buildRegionData(data){
+  const map={};
+  data.forEach(j=>{const r=j.custom_job_district||j.job_district||j.job_state||"Unknown";if(!map[r])map[r]={name:r,jobs:0,leads:0,interested:0,selected:0};map[r].jobs++;map[r].leads+=getSC(j,"SHORTLISTED");map[r].interested+=getSC(j,"INTERESTED");map[r].selected+=(getSC(j,"COMPANY_APPROVED")||getSC(j,"SELECTED"));});
+  regionData=Object.values(map);
+  document.getElementById("donut-center-val").textContent=regionData.length;
+}
+function renderRegionChart(){
+  const top=regionData.slice().sort((a,b)=>b.jobs-a.jobs).slice(0,12);
+  const othersJobs=regionData.slice(12).reduce((s,r)=>s+r.jobs,0);
+  const labels=[...top.map(r=>r.name.length>16?r.name.substring(0,16)+"...":r.name)];
+  const values=[...top.map(r=>r.jobs)];
+  if(othersJobs>0){labels.push("Others");values.push(othersJobs);}
+  if(donutChart)donutChart.destroy();
+  donutChart=new Chart(document.getElementById("donut-chart"),{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:COLORS.slice(0,labels.length),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:false,cutout:"68%",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+ctx.raw+" JQs"}}},onClick:(e,els)=>{if(!els.length)return;const realName=top[els[0].index]?.name;if(realName)filterByRegion(realName);}}});
+}
+function renderRegionTable(){
+  const q=document.getElementById("region-search").value.toLowerCase();
+  let rows=regionData.filter(r=>r.name.toLowerCase().includes(q));
+  rows.sort((a,b)=>{const av=a[regionSort.key],bv=b[regionSort.key];return typeof av==="string"?av.localeCompare(bv)*regionSort.dir:(bv-av)*-regionSort.dir;});
+  const maxJobs=Math.max(...rows.map(r=>r.jobs),1),maxLeads=Math.max(...rows.map(r=>r.leads),1);
+  let html="";
+  rows.forEach(r=>{
+    const isActive=activeRegion===r.name;
+    html+='<tr class="'+(isActive?"active-region":"")+'" onclick="filterByRegion(\''+r.name.replace(/'/g,"\\'")+'\')">'
+      +'<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:'+(isActive?600:400)+';color:'+(isActive?"#003399":"#1a2a3a")+'">'+r.name+'</td>'
+      +'<td style="text-align:right;font-weight:600;color:#003399">'+r.jobs+'<div class="r-bar"><div class="r-bar-fill" style="width:'+Math.round(r.jobs/maxJobs*100)+'%"></div></div></td>'
+      +'<td style="text-align:right;font-weight:600;color:#009900">'+r.leads.toLocaleString()+'<div class="r-leads-bar"><div class="r-leads-fill" style="width:'+Math.round(r.leads/maxLeads*100)+'%"></div></div></td>'
+      +'</tr>';
+  });
+  document.getElementById("region-tbody").innerHTML=html||'<tr><td colspan="3" style="text-align:center;color:#99aabb;padding:16px">No regions found</td></tr>';
+}
+function filterRegions(){renderRegionTable();}
+function sortRegions(key){if(regionSort.key===key)regionSort.dir*=-1;else{regionSort.key=key;regionSort.dir=-1;}renderRegionTable();}
+function filterByRegion(name){
+  if(activeRegion===name){clearRegionFilter();return;}
+  activeRegion=name;
+  document.getElementById("region-filter-badge").style.display="inline-flex";
+  document.getElementById("filter-region-name").textContent="Region: "+name;
+  page=1;selected=-1;renderRegionTable();loadFiltered();
+}
+function clearRegionFilter(){activeRegion=null;document.getElementById("region-filter-badge").style.display="none";page=1;selected=-1;renderRegionTable();load();}
+async function loadFiltered(){
+  document.getElementById("table-area").innerHTML='<div class="loading">Filtering by region...</div>';
+  try{
+    const d=await api(1,"","OPEN",50);
+    let items=d.data||[];
+    const total2=d.pagination_info?.total??50;
+    const pages=Math.min(Math.ceil(total2/50),4);
+    for(let p=2;p<=pages;p++){const dx=await api(p,"","OPEN",50);items=[...items,...(dx.data||[])];}
+    allData=items.filter(j=>(j.custom_job_district||j.job_district||j.job_state||"Unknown")===activeRegion);
+    document.getElementById("jq-count").textContent=allData.length+" JQs";
+    renderTable(allData);document.getElementById("pagination").innerHTML="";
+  }catch(e){document.getElementById("table-area").innerHTML='<div class="empty">Error: '+e.message+'</div>';}
+}
+async function load(){
+  document.getElementById("table-area").innerHTML='<div class="loading">Loading...</div>';
+  try{
+    const d=await api(page,search,status);
+    allData=d.data||d.job_queries||[];
+    const total=d.pagination_info?.total??d.total_count??allData.length;
+    const totalPages=d.pagination_info?.number_of_pages??Math.ceil(total/10);
+    document.getElementById("jq-count").textContent=total+" JQs";
+    renderTable(allData);renderPagination(totalPages);
+  }catch(e){document.getElementById("table-area").innerHTML='<div class="empty">Error: '+e.message+'</div>';}
+}
+function renderTable(items){
+  if(!items.length){document.getElementById("table-area").innerHTML='<div class="empty">No job queries found.</div>';return;}
+  const maxLeads=Math.max(...items.map(j=>getSC(j,"SHORTLISTED")),1);
+  let html='<table><thead><tr><th>Job Query</th><th>Location</th><th class="num c-leads">Leads</th><th class="num c-int">Interested</th><th class="num c-qual">Qualify pass</th><th class="num c-fail">Qualify fail</th><th class="num c-int2">Interview</th><th class="num c-sel">Selected</th><th>Status</th></tr></thead><tbody>';
+  items.forEach((j,i)=>{
+    const name=j.title||j.name||"Untitled",id=j.job_query_id||j.id||"";
+    const loc=[j.job_locality,j.custom_job_district].filter(Boolean).join(", ")||[j.job_district,j.job_state].filter(Boolean).join(", ")||"-";
+    const leads=getSC(j,"SHORTLISTED"),interested=getSC(j,"INTERESTED"),qualified=getSC(j,"QUALIFIED")||getSC(j,"EVALUATING"),rejected=getSC(j,"NOT_INTERESTED")||getSC(j,"COMPANY_REJECTED"),interview=getSC(j,"INTERVIEW_SHORTLISTED"),sel=getSC(j,"COMPANY_APPROVED")||getSC(j,"SELECTED");
+    const pct=leads?Math.round(leads/maxLeads*100):0,st=j.job_query_status||status,isExp=selected===i;
+    const nc=(v,cls)=>v>0?'<td class="num-cell '+cls+'">'+v.toLocaleString()+'</td>':'<td class="num-cell zero">0</td>';
+    html+='<tr class="job-row'+(isExp?" expanded":"")+'" onclick="toggle('+i+')">'
+      +'<td><div class="jq-name">'+name+'</div><div class="jq-id">'+id+'</div><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div></td>'
+      +'<td style="color:#6688aa;font-size:12px">'+loc+'</td>'
+      +nc(leads,"c-leads")+nc(interested,"c-int")+nc(qualified,"c-qual")+nc(rejected,"c-fail")+nc(interview,"c-int2")+nc(sel,"c-sel")
+      +'<td><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
+    if(isExp){
+      const sc=j.worker_status_count||[];
+      html+='<tr class="detail-row"><td colspan="9"><div class="detail-inner">'
+        +'<div class="di"><div class="dk">Job ID</div><div class="dv" style="font-size:11px;font-family:monospace">'+id+'</div></div>'
+        +'<div class="di"><div class="dk">Role</div><div class="dv">'+(j.custom_job_role||j.job_role||"-")+'</div></div>'
+        +'<div class="di"><div class="dk">Openings</div><div class="dv">'+(j.number_of_openings??j.openings??"-")+'</div></div>'
+        +'<div class="di"><div class="dk">Experience</div><div class="dv">'+(j.min_experience||"-")+'</div></div>'
+        +'<div class="di"><div class="dk">Min salary</div><div class="dv">'+(j.min_salary?"Rs."+Number(j.min_salary).toLocaleString("en-IN"):"-")+'</div></div>'
+        +'<div class="di"><div class="dk">Max salary</div><div class="dv">'+(j.max_salary?"Rs."+Number(j.max_salary).toLocaleString("en-IN"):"-")+'</div></div>'
+        +'<div class="di"><div class="dk">District</div><div class="dv">'+(j.custom_job_district||j.job_district||"-")+'</div></div>'
+        +'<div class="di"><div class="dk">State</div><div class="dv">'+(j.job_state||"-")+'</div></div>'
+        +'<div class="di"><div class="dk">Created by</div><div class="dv" style="font-size:11px">'+(j.audit_metadata?.added_by||"-")+'</div></div>'
+        +'<div class="di"><div class="dk">Updated</div><div class="dv" style="font-size:11px">'+(j.audit_metadata?.updated_on?new Date(j.audit_metadata.updated_on).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"-")+'</div></div>'
+        +'<div class="di"><div class="dk">App link</div><div class="dv"><a href="https://bluedart.hunar.ai/job/'+(j.job_query_id||j.shortcode||"")+'" target="_blank" style="color:#003399;font-weight:600">Open</a></div></div>'
+        +'</div><div class="pipeline-row">'+sc.map(x=>'<div class="ps">'+x.status+': <b>'+x.count+'</b></div>').join("")+'</div>'
+        +(j.description?'<div class="desc-section"><div style="font-size:10px;color:#99aabb;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;font-weight:600">Description</div><div class="desc-box">'+j.description+'</div></div>':"")
+        +'</td></tr>';
+    }
+  });
+  html+='</tbody></table>';
+  document.getElementById("table-area").innerHTML=html;
+}
+function toggle(i){selected=selected===i?-1:i;renderTable(allData);}
+function renderPagination(totalPages){
+  if(totalPages<=1){document.getElementById("pagination").innerHTML="";return;}
+  let html='<button class="page-btn" onclick="goPage('+(page-1)+')" '+(page===1?"disabled":"")+'>&#8592;</button>';
+  let start=Math.max(1,Math.min(page-3,totalPages-6));
+  for(let p=start;p<=Math.min(start+6,totalPages);p++)html+='<button class="page-btn'+(p===page?" active":"")+'" onclick="goPage('+p+')">'+p+'</button>';
+  html+='<button class="page-btn" onclick="goPage('+(page+1)+')" '+(page===totalPages?"disabled":"")+'>&#8594;</button>';
+  html+='<span style="font-size:12px;color:#99aabb;margin-left:4px">'+page+' / '+totalPages+'</span>';
+  document.getElementById("pagination").innerHTML=html;
+}
+function goPage(p){page=p;selected=-1;load();}
+function doSearch(){page=1;search=document.getElementById("search").value;selected=-1;load();}
+function setStatus(s){status=s;page=1;search="";selected=-1;document.getElementById("search").value="";document.getElementById("btn-open").className="status-btn"+(s==="OPEN"?" active":"");document.getElementById("btn-closed").className="status-btn"+(s==="CLOSED"?" active":"");load();}
+function refreshAll(){load();loadAll();}
+function toggleToken(){const bar=document.getElementById("token-bar");bar.classList.toggle("open");if(bar.classList.contains("open"))document.getElementById("token-input").focus();}
+function updateToken(){
+  const t=document.getElementById("token-input").value.trim();
+  if(!t)return;
+  fetch("/set-tokens",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access:t,secret:"${process.env.ADMIN_SECRET||''}",refresh:""})})
+    .then(r=>r.json()).then(d=>{if(d.ok){alert("Token updated!");document.getElementById("token-bar").classList.remove("open");refreshAll();}else alert("Wrong admin secret.");})
+    .catch(()=>alert("Failed."));
+}
+function toggleAutoRefresh(){autoEnabled=!autoEnabled;document.getElementById("auto-label").textContent=autoEnabled?"Auto - every hour":"Auto - off";if(autoEnabled)autoTimer=setInterval(refreshAll,3600000);else clearInterval(autoTimer);}
+autoTimer=setInterval(refreshAll,3600000);
+load();loadAll();
+<\/script>
+</body>
+</html>`;
+}
 
 const PORT = process.env.PORT || 3131;
 app.listen(PORT, () => console.log(`Blue Dart proxy running on port ${PORT}`));
