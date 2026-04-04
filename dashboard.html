@@ -103,7 +103,32 @@ tr.job-row.expanded td{background:#eef2fa}
 @media(max-width:800px){.charts-row{grid-template-columns:1fr}.region-layout{flex-direction:column}.donut-wrap{width:100%}}
 </style>
 </head>
-<body>
+<body><div id="auth-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#f0f4fa;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:white;border-radius:16px;padding:40px 48px;box-shadow:0 4px 24px rgba(0,51,153,.12);text-align:center;min-width:320px">
+    <div style="font-size:22px;font-weight:800;margin-bottom:4px"><span style="color:#003399">BLUE</span> <span style="color:#009900">DART</span></div>
+    <div style="font-size:13px;color:#99aabb;margin-bottom:28px">Job Query Dashboard</div>
+    <input type="password" id="pwd-input" placeholder="Enter password" style="width:100%;padding:10px 14px;border:1.5px solid #d0ddf0;border-radius:8px;font-size:15px;outline:none;margin-bottom:12px;text-align:center" onkeydown="if(event.key===\'Enter\')checkPwd()"/>
+    <div id="pwd-error" style="color:#cc3333;font-size:12px;margin-bottom:10px;display:none">Incorrect password. Try again.</div>
+    <button onclick="checkPwd()" style="width:100%;padding:10px;background:#003399;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">Login</button>
+  </div>
+</div>
+<script>
+const CORRECT_PWD = "bluedart2026";
+function checkPwd(){
+  const v = document.getElementById("pwd-input").value;
+  if(v === CORRECT_PWD){
+    document.getElementById("auth-overlay").style.display="none";
+    sessionStorage.setItem("bd_auth","1");
+  } else {
+    document.getElementById("pwd-error").style.display="block";
+    document.getElementById("pwd-input").value="";
+    document.getElementById("pwd-input").focus();
+  }
+}
+if(sessionStorage.getItem("bd_auth")==="1"){
+  document.getElementById("auth-overlay").style.display="none";
+}
+</script>
 <div class="topbar">
   <div class="topbar-left">
     <div class="brand"><span class="blue">BLUE</span>&nbsp;<span class="green">DART</span></div>
