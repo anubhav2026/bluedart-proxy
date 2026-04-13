@@ -376,7 +376,7 @@ async function load(){
 function renderTable(items){
   if(!items.length){document.getElementById("table-area").innerHTML='<div class="empty">No job queries found.</div>';return;}
   const maxLeads=Math.max(...items.map(j=>getSC(j,"SHORTLISTED")),1);
-  let html='<table><thead><tr><th>Job Query</th><th>Location</th><th class="num c-leads">Leads</th><th class="num c-int">Interested</th><th class="num c-qual">Qualify pass</th><th class="num c-fail">Qualify fail</th><th class="num c-int2">Interview</th><th class="num c-sel">Selected</th><th>Status</th></tr></thead><tbody>';
+  let html='<table><thead><tr><th>Job Query</th><th>Location</th><th class="num c-leads">Leads</th><th class="num c-int">Interested</th><th class="num c-fail">Not interested</th><th class="num c-qual">Qualify pass</th><th class="num c-fail">Qualify fail</th><th class="num c-int2">Interview</th><th class="num c-sel">Selected</th><th>Status</th></tr></thead><tbody>';
   items.forEach((j,i)=>{
     const name=j.title||j.name||"Untitled",id=j.job_query_id||j.id||"";
     const loc=[j.job_locality,j.custom_job_district].filter(Boolean).join(", ")||[j.job_district,j.job_state].filter(Boolean).join(", ")||"—";
@@ -386,11 +386,11 @@ function renderTable(items){
     html+='<tr class="job-row'+(isExp?" expanded":"")+'" onclick="toggle('+i+')">'
       +'<td><div class="jq-name">'+name+'</div><div class="jq-id">'+id+'</div><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div></td>'
       +'<td style="color:#6688aa;font-size:12px">'+loc+'</td>'
-      +nc(leads,"c-leads")+nc(interested,"c-int")+nc(qualified,"c-qual")+nc(rejected,"c-fail")+nc(interview,"c-int2")+nc(sel,"c-sel")
+      +nc(leads,"c-leads")+nc(interested,"c-int")+nc(rejected,"c-fail")+nc(qualified,"c-qual")+nc(interview,"c-int2")+nc(sel,"c-sel")
       +'<td><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
     if(isExp){
       const sc=j.worker_status_count||[];
-      html+='<tr class="detail-row"><td colspan="9"><div class="detail-inner">'
+      html+='<tr class="detail-row"><td colspan="10"><div class="detail-inner">'
         +'<div class="di"><div class="dk">Job ID</div><div class="dv" style="font-size:11px;font-family:monospace">'+id+'</div></div>'
         +'<div class="di"><div class="dk">Role</div><div class="dv">'+(j.custom_job_role||j.job_role||"—")+'</div></div>'
         +'<div class="di"><div class="dk">Openings</div><div class="dv">'+(j.number_of_openings??j.openings??"—")+'</div></div>'
