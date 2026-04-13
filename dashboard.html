@@ -107,7 +107,7 @@ tr.job-row.expanded td{background:#eef2fa}
   <div style="background:white;border-radius:16px;padding:40px 48px;box-shadow:0 4px 24px rgba(0,51,153,.12);text-align:center;min-width:320px">
     <div style="font-size:22px;font-weight:800;margin-bottom:4px"><span style="color:#003399">BLUE</span> <span style="color:#009900">DART</span></div>
     <div style="font-size:13px;color:#99aabb;margin-bottom:28px">Job Query Dashboard</div>
-    <input type="password" id="pwd-input" placeholder="Enter password" style="width:100%;padding:10px 14px;border:1.5px solid #d0ddf0;border-radius:8px;font-size:15px;outline:none;margin-bottom:12px;text-align:center" onkeydown="if(event.key===\'Enter\')checkPwd()"/>
+    <input type="password" id="pwd-input" placeholder="Enter password" style="width:100%;padding:10px 14px;border:1.5px solid #d0ddf0;border-radius:8px;font-size:15px;outline:none;margin-bottom:12px;text-align:center" onkeydown="if(event.key==='Enter')checkPwd()"/>
     <div id="pwd-error" style="color:#cc3333;font-size:12px;margin-bottom:10px;display:none">Incorrect password. Try again.</div>
     <button onclick="checkPwd()" style="width:100%;padding:10px;background:#003399;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">Login</button>
   </div>
@@ -225,17 +225,21 @@ function sumSC(data,s){return data.reduce((a,j)=>a+getSC(j,s),0);}
 
 async function loadAll(){
   try{
-    const d1=await api(1,"","OPEN",50);
-    const total=d1.pagination_info?.total??d1.total_count??50;
-    const pages=Math.min(Math.ceil(total/50),4);
+    const d1=await api(1,"","OPEN",100);
+    if(!d1||!d1.data)return;
+    const total=d1.pagination_info?.total??d1.total_count??100;
+    const pages=Math.min(Math.ceil(total/100),2);
     let all=[...(d1.data||[])];
-    for(let p=2;p<=pages;p++){const dx=await api(p,"","OPEN",50);all=[...all,...(dx.data||[])];}
+    for(let p=2;p<=pages;p++){
+      try{const dx=await api(p,"","OPEN",100);all=[...all,...(dx.data||[])];}
+      catch(e){break;}
+    }
     computeStats(all,total);
     renderFunnel(all);
     buildRegionData(all);
     renderRegionChart();
     renderRegionTable();
-  }catch(e){console.error(e);}
+  }catch(e){console.error("loadAll error:",e);}
 }
 
 function computeStats(data,total){
