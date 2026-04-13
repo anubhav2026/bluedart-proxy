@@ -519,16 +519,16 @@ function setView(v){
 }
 
 function setStatus(s){
-  currentView='jq';
-  status=s;page=1;search='';selected=-1;
-  document.getElementById('search').style.display='block';
-  document.querySelector('.table-wrap').style.display='block';
-  document.getElementById('pagination').style.display='';
-  document.getElementById('recruiter-area').style.display='none';
-  document.getElementById('search').value='';
-  document.getElementById('btn-open').className='status-btn'+(s==='OPEN'?' active':'');
-  document.getElementById('btn-closed').className='status-btn'+(s==='CLOSED'?' active':'');
-  document.getElementById('btn-recruiter').className='status-btn';
+  currentView="jq";
+  status=s;page=1;search="";selected=-1;
+  document.getElementById("search").style.display="block";
+  document.querySelector(".table-wrap").style.display="block";
+  document.getElementById("pagination").style.display="";
+  document.getElementById("recruiter-area").style.display="none";
+  document.getElementById("search").value="";
+  document.getElementById("btn-open").className="status-btn"+(s==="OPEN"?" active":"");
+  document.getElementById("btn-closed").className="status-btn"+(s==="CLOSED"?" active":"");
+  document.getElementById("btn-recruiter").className="status-btn";
   load();
 }
 
@@ -573,11 +573,11 @@ function renderRecruiterView(){
   // Month filter buttons
   let html='<div class="month-filter">';
   html+='<span style="font-size:12px;color:#7799bb;font-weight:600">Filter by month:</span>';
-  html+='<button class="month-btn'+(activeMonth==='all'?' active':'')+'" onclick="setMonth('all')">All time</button>';
+  html+='<button class="month-btn'+(activeMonth==="all"?" active":"")+'" onclick="setMonth(\'all\')">All time</button>';
   months.forEach(m=>{
     const [y,mo]=m.split('-');
     const label=new Date(y,mo-1).toLocaleString('en',{month:'short',year:'numeric'});
-    html+='<button class="month-btn'+(activeMonth===m?' active':'')+'" onclick="setMonth(''+m+'')">'+label+'</button>';
+    html+='<button class="month-btn'+(activeMonth===m?" active":"")+('" onclick="setMonth(\''+m+'\')">')+label+'</button>';
   });
   html+='</div>';
 
@@ -656,13 +656,7 @@ function renderPagination(totalPages){
 }
 function goPage(p){page=p;selected=-1;load();}
 function doSearch(){page=1;search=document.getElementById("search").value;selected=-1;load();}
-function setStatus(s){
-  status=s;page=1;search="";selected=-1;
-  document.getElementById("search").value="";
-  document.getElementById("btn-open").className="status-btn"+(s==="OPEN"?" active":"");
-  document.getElementById("btn-closed").className="status-btn"+(s==="CLOSED"?" active":"");
-  load();
-}
+// setStatus handled above
 function refreshAll(){load();loadAll().then(()=>{loadAllQualify();if(currentView==='recruiter')renderRecruiterView();});}
 function toggleToken(){const bar=document.getElementById("token-bar");bar.classList.toggle("open");if(bar.classList.contains("open"))document.getElementById("token-input").focus();}
 function updateToken(){const t=document.getElementById("token-input").value.trim();if(t){alert("Update the TOKEN variable in proxy-bluedart.py and restart.");document.getElementById("token-bar").classList.remove("open");}}
