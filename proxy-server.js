@@ -104,3 +104,13 @@ setInterval(async () => {
   console.log("Auto-refreshing token...");
   await refreshAccessToken();
 }, 25 * 60 * 1000);
+
+app.post("/v1/company/bluedart/qualified-workers/:jqId", async (req, res) => {
+  try {
+    const response = await callAPI(`/v1/company/bluedart/job-query/${req.params.jqId}/qualified-workers`, req.body);
+    const data = await response.json();
+    return res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
