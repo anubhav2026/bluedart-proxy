@@ -471,11 +471,13 @@ async function loadQualify(jq){
 function updateQualifyCards(){
   const src=allJQsCache.length?allJQsCache:allData;
   if(!src||!src.length)return;
-  // For loaded JQs use accurate _qpass, for unloaded use QUALIFIED status count
+  const leads=src.reduce((s,j)=>s+getSC(j,"SHORTLISTED"),0);
   const totalPass=src.reduce((s,j)=>s+(j._qualifyLoaded?j._qpass||0:getSC(j,"QUALIFIED")),0);
   const totalFail=src.reduce((s,j)=>s+(j._qualifyLoaded?j._qfail||0:0),0);
   document.getElementById("s-qual-pass").textContent=totalPass.toLocaleString();
+  document.getElementById("s-qual-pass-pct").textContent=leads?Math.round(totalPass/leads*100)+"% of leads":"—";
   document.getElementById("s-qual-fail").textContent=totalFail.toLocaleString();
+  document.getElementById("s-qual-fail-pct").textContent=leads?Math.round(totalFail/leads*100)+"% of leads":"—";
 }
 
 function toggle(i){selected=selected===i?-1:i;renderTable(allData);}
