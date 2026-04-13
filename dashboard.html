@@ -249,7 +249,7 @@ function computeStats(data,total){
   document.getElementById("s-interested").textContent=interested.toLocaleString();
   document.getElementById("s-interested-pct").textContent=leads?Math.round(interested/leads*100)+"% of leads":"—";
   document.getElementById("s-not-interested").textContent=notInterested.toLocaleString();
-  document.getElementById("s-not-interested-pct").textContent=interested?Math.round(notInterested/interested*100)+"% of interested":"—";
+  document.getElementById("s-not-interested-pct").textContent=leads?Math.round(notInterested/leads*100)+"% of leads":"—";
   document.getElementById("s-qual-pass").textContent=qualPass.toLocaleString();
   document.getElementById("s-qual-pass-pct").textContent=interested?Math.round(qualPass/interested*100)+"% pass rate":"—";
   document.getElementById("s-qual-fail").textContent=qualFail.toLocaleString();
@@ -394,8 +394,8 @@ function renderTable(items){
       +'<td><div class="jq-name">'+name+'</div><div class="jq-id">'+id+'</div><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div></td>'
       +'<td style="color:#6688aa;font-size:12px">'+loc+'</td>'
       +nc(leads,"c-leads")+nc(interested,"c-int")+nc(notInt,"c-fail")
-      +(qualPass>0?'<td class="num-cell c-qual" id="qp_'+id+'">'+qualPass.toLocaleString()+'</td>':'<td class="num-cell zero" id="qp_'+id+'">…</td>')
-      +(qualFail>0?'<td class="num-cell c-fail" id="qf_'+id+'">'+qualFail.toLocaleString()+'</td>':'<td class="num-cell zero" id="qf_'+id+'">…</td>')
+      +(qualPass>0?'<td class="num-cell c-qual" id="qp_'+id+'">'+qualPass.toLocaleString()+'</td>':'<td class="num-cell zero" id="qp_'+id+'">0</td>')
+      +('<td class="num-cell'+(j._qfail>0?' c-fail':' zero')+'" id="qf_'+id+'">'+(j._qfail!=null?j._qfail.toLocaleString():'…')+'</td>')
       +nc(interview,"c-int2")+nc(sel,"c-sel")
       +'<td style="border-left:2px solid #d0ddf0"><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
     if(isExp){
@@ -425,7 +425,7 @@ function renderTable(items){
 async function fetchQualifyWorkers(jqId){
   let all=[],pg=1,total=null;
   do{
-    const data=await fetch("/v1/company/bluedart/job-query/"+jqId+"/qualified-workers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:pg,items_per_page:100,search_key:"",filters:{}})}).then(r=>r.json());
+    const data=await fetch("/v1/company/bluedart/qualified-workers/"+jqId,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:pg,items_per_page:100,search_key:"",filters:{}})}).then(r=>r.json());
     const workers=data.data||data.workers||data.results||[];
     if(total===null)total=data.pagination_info?.total_count||data.total||workers.length;
     all=[...all,...workers];pg++;
