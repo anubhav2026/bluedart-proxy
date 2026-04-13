@@ -211,7 +211,7 @@ if(sessionStorage.getItem("bd_auth")==="1"){
 </div>
 
 <script>
-let page=1,search="",status="OPEN",selected=-1,allData=[],autoTimer=null,autoEnabled=true;
+let page=1,search="",status="OPEN",selected=-1,allData=[],allJQsCache=[],autoTimer=null,autoEnabled=true;
 let funnelChart=null,donutChart=null;
 let regionData=[],regionSort={key:"jobs",dir:-1},activeRegion=null;
 const COLORS=["#003399","#0055cc","#0077ff","#009900","#00bb00","#6633cc","#9933cc","#cc6600","#007788","#cc3333","#0099cc","#336600","#993300","#006633","#330099"];
@@ -234,6 +234,7 @@ async function loadAll(){
       try{const dx=await api(p,"","OPEN",100);all=[...all,...(dx.data||[])];}
       catch(e){break;}
     }
+    allJQsCache=all;
     computeStats(all,total);
     renderFunnel(all);
     buildRegionData(all);
@@ -435,7 +436,7 @@ async function fetchQualifyWorkers(jqId){
 }
 
 async function loadAllQualify(){
-  const jqs=allData.filter?allData.filter(j=>(j.worker_status_count||[]).some(s=>s.status==="EVALUATING"&&s.count>0)):[];
+  const jqs=(allJQsCache.length?allJQsCache:allData).filter(j=>(j.worker_status_count||[]).some(s=>s.status==="EVALUATING"&&s.count>0));
   if(!jqs.length)return;
   const CONC=5;let i=0;
   async function next(){
@@ -468,10 +469,11 @@ async function loadQualify(jq){
 }
 
 function updateQualifyCards(){
-  if(!allData||!allData.length)return;
+  const src=allJQsCache.length?allJQsCache:allData;
+  if(!src||!src.length)return;
   // For loaded JQs use accurate _qpass, for unloaded use QUALIFIED status count
-  const totalPass=allData.reduce((s,j)=>s+(j._qualifyLoaded?j._qpass||0:getSC(j,"QUALIFIED")),0);
-  const totalFail=allData.reduce((s,j)=>s+(j._qualifyLoaded?j._qfail||0:0),0);
+  const totalPass=src.reduce((s,j)=>s+(j._qualifyLoaded?j._qpass||0:getSC(j,"QUALIFIED")),0);
+  const totalFail=src.reduce((s,j)=>s+(j._qualifyLoaded?j._qfail||0:0),0);
   document.getElementById("s-qual-pass").textContent=totalPass.toLocaleString();
   document.getElementById("s-qual-fail").textContent=totalFail.toLocaleString();
 }
