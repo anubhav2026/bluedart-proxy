@@ -252,11 +252,11 @@ function computeStats(data,total){
   document.getElementById("s-not-interested").textContent=notInterested.toLocaleString();
   document.getElementById("s-not-interested-pct").textContent=leads?Math.round(notInterested/leads*100)+"% of leads":"—";
   document.getElementById("s-qual-pass").textContent=qualPass.toLocaleString();
-  document.getElementById("s-qual-pass-pct").textContent=interested?Math.round(qualPass/interested*100)+"% pass rate":"—";
+  document.getElementById("s-qual-pass-pct").textContent=leads?Math.round(qualPass/leads*100)+"% of leads":"—";
   document.getElementById("s-qual-fail").textContent=qualFail.toLocaleString();
-  document.getElementById("s-qual-fail-pct").textContent=interested?Math.round(qualFail/interested*100)+"% fail rate":"—";
+  document.getElementById("s-qual-fail-pct").textContent=leads?Math.round(qualFail/leads*100)+"% of leads":"—";
   document.getElementById("s-interview").textContent=interview.toLocaleString();
-  document.getElementById("s-interview-pct").textContent=qualPass?Math.round(interview/qualPass*100)+"% shortlisted":"—";
+  document.getElementById("s-interview-pct").textContent=leads?Math.round(interview/leads*100)+"% of leads":"—";
   const now=new Date();
   document.getElementById("topbar-info").innerHTML="Updated "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" · <b>"+total+" active JQs</b>";
 }
