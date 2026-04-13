@@ -261,12 +261,14 @@ function computeStats(data,total){
   document.getElementById("s-leads").textContent=leads.toLocaleString();
   document.getElementById("s-interested").textContent=interested.toLocaleString();
   document.getElementById("s-interested-pct").textContent=leads?Math.round(interested/leads*100)+"% of leads":"—";
-  document.getElementById("s-qualified").textContent=qualified.toLocaleString();
-  document.getElementById("s-qualified-pct").textContent=interested?Math.round(qualified/interested*100)+"% pass rate":"—";
-  document.getElementById("s-interview").textContent=interview.toLocaleString();
-  document.getElementById("s-interview-pct").textContent=qualified?Math.round(interview/qualified*100)+"% shortlisted":"—";
   document.getElementById("s-not-interested").textContent=notInterested.toLocaleString();
   document.getElementById("s-not-interested-pct").textContent=interested?Math.round(notInterested/interested*100)+"% of interested":"—";
+  document.getElementById("s-qualified").textContent=qualPass.toLocaleString();
+  document.getElementById("s-qualified-pct").textContent=interested?Math.round(qualPass/interested*100)+"% pass rate":"—";
+  document.getElementById("s-qual-fail").textContent=qualFail.toLocaleString();
+  document.getElementById("s-qual-fail-pct").textContent=interested?Math.round(qualFail/interested*100)+"% fail rate":"—";
+  document.getElementById("s-interview").textContent=interview.toLocaleString();
+  document.getElementById("s-interview-pct").textContent=qualPass?Math.round(interview/qualPass*100)+"% shortlisted":"—";
   const now=new Date();
   document.getElementById("topbar-info").innerHTML="Updated "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" · <b>"+total+" active JQs</b>";
 }
