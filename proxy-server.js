@@ -91,6 +91,17 @@ app.post("/set-tokens", (req, res) => {
 
 app.get("/health", (_, res) => res.json({ ok: true, time: new Date().toISOString(), hasToken: !!ACCESS_TOKEN }));
 
+
+app.post("/v1/company/bluedart/qualified-workers/:jqId", async (req, res) => {
+  try {
+    const response = await callAPI(`/v1/company/bluedart/job-query/${req.params.jqId}/qualified-workers`, req.body);
+    const data = await response.json();
+    return res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 const PORT = process.env.PORT || 3131;
 app.listen(PORT, async () => {
   console.log("Blue Dart proxy running on port " + PORT);
@@ -105,12 +116,3 @@ setInterval(async () => {
   await refreshAccessToken();
 }, 25 * 60 * 1000);
 
-app.post("/v1/company/bluedart/qualified-workers/:jqId", async (req, res) => {
-  try {
-    const response = await callAPI(`/v1/company/bluedart/job-query/${req.params.jqId}/qualified-workers`, req.body);
-    const data = await response.json();
-    return res.json(data);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
