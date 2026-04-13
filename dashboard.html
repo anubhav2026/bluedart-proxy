@@ -380,13 +380,13 @@ function renderTable(items){
   items.forEach((j,i)=>{
     const name=j.title||j.name||"Untitled",id=j.job_query_id||j.id||"";
     const loc=[j.job_locality,j.custom_job_district].filter(Boolean).join(", ")||[j.job_district,j.job_state].filter(Boolean).join(", ")||"—";
-    const leads=getSC(j,"SHORTLISTED"),interested=getSC(j,"INTERESTED"),qualified=getSC(j,"QUALIFIED")||getSC(j,"EVALUATING"),rejected=getSC(j,"NOT_INTERESTED")||getSC(j,"COMPANY_REJECTED"),interview=getSC(j,"INTERVIEW_SHORTLISTED"),sel=getSC(j,"COMPANY_APPROVED")||getSC(j,"SELECTED");
+    const leads=getSC(j,"SHORTLISTED"),interested=getSC(j,"INTERESTED"),qualified=getSC(j,"QUALIFIED")||getSC(j,"EVALUATING"),rejected=getSC(j,"NOT_INTERESTED"),qualFail=getSC(j,"COMPANY_REJECTED"),interview=getSC(j,"INTERVIEW_SHORTLISTED"),sel=(getSC(j,"COMPANY_APPROVED")||0)+(getSC(j,"SELECTED")||0);
     const pct=leads?Math.round(leads/maxLeads*100):0,st=j.job_query_status||status,isExp=selected===i;
     const nc=(v,cls)=>v>0?'<td class="num-cell '+cls+'">'+v.toLocaleString()+'</td>':'<td class="num-cell zero">0</td>';
     html+='<tr class="job-row'+(isExp?" expanded":"")+'" onclick="toggle('+i+')">'
       +'<td><div class="jq-name">'+name+'</div><div class="jq-id">'+id+'</div><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div></td>'
       +'<td style="color:#6688aa;font-size:12px">'+loc+'</td>'
-      +nc(leads,"c-leads")+nc(interested,"c-int")+nc(rejected,"c-fail")+nc(qualified,"c-qual")+nc(interview,"c-int2")+nc(sel,"c-sel")
+      +nc(leads,"c-leads")+nc(interested,"c-int")+nc(rejected,"c-fail")+nc(qualified,"c-qual")+nc(qualFail,"c-fail")+nc(interview,"c-int2")+nc(sel,"c-sel")
       +'<td style="border-left:2px solid #d0ddf0"><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
     if(isExp){
       const sc=j.worker_status_count||[];
