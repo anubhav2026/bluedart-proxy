@@ -101,6 +101,25 @@ tr.job-row.expanded td{background:#eef2fa}
 .empty{padding:56px;text-align:center;color:#99aabb}
 .loading{padding:56px;text-align:center;color:#99aabb;font-size:13px}
 @media(max-width:800px){.charts-row{grid-template-columns:1fr}.region-layout{flex-direction:column}.donut-wrap{width:100%}}
+.month-filter{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.month-btn{padding:5px 14px;border-radius:20px;border:1px solid #ccd8ee;background:#fff;color:#6688aa;font-size:12px;font-weight:600;cursor:pointer}
+.month-btn.active{background:#003399;color:#fff;border-color:#003399}
+.recruiter-table{width:100%;border-collapse:collapse;font-size:13px}
+.recruiter-table th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#7799bb;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #d0ddf0;white-space:nowrap;cursor:pointer}
+.recruiter-table th:hover{color:#003399}
+.recruiter-table th.num{text-align:right}
+.recruiter-table td{padding:10px 14px;border-bottom:1px solid #eef2fa;vertical-align:middle}
+.recruiter-table tr:hover td{background:#f4f7fd}
+.recruiter-table tr.expanded-rec td{background:#eef2fa}
+.rec-email{font-weight:600;color:#1a2a3a}
+.rec-sub{font-size:11px;color:#99aabb;margin-top:2px}
+.jq-detail-row td{background:#f0f4fa;padding:0}
+.jq-detail-inner{padding:12px 20px}
+.jq-mini-table{width:100%;border-collapse:collapse;font-size:12px}
+.jq-mini-table th{padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#99aabb;text-transform:uppercase;border-bottom:1px solid #d0ddf0}
+.jq-mini-table th.num{text-align:right}
+.jq-mini-table td{padding:7px 10px;border-bottom:1px solid #eef2fa}
+.jq-mini-table tr:last-child td{border-bottom:none}
 </style>
 </head>
 <body><div id="auth-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#f0f4fa;display:flex;align-items:center;justify-content:center;z-index:9999">
@@ -204,10 +223,12 @@ if(sessionStorage.getItem("bd_auth")==="1"){
       <input class="search-box" id="search" placeholder="🔍 Search job queries..." onkeydown="if(event.key==='Enter')doSearch()" oninput="if(this.value==='')doSearch()"/>
       <button class="status-btn active" id="btn-open" onclick="setStatus('OPEN')">Open</button>
       <button class="status-btn" id="btn-closed" onclick="setStatus('CLOSED')">Closed</button>
+      <button class="status-btn" id="btn-recruiter" onclick="setView('recruiter')">👤 Recruiters</button>
     </div>
   </div>
   <div class="table-wrap"><div id="table-area"><div class="loading">Loading job queries…</div></div></div>
   <div class="pagination" id="pagination"></div>
+  <div id="recruiter-area" style="display:none;margin-top:0"></div>
 </div>
 
 <script>
@@ -480,6 +501,149 @@ function updateQualifyCards(){
   document.getElementById("s-qual-fail-pct").textContent=leads?Math.round(totalFail/leads*100)+"% of leads":"—";
 }
 
+
+let currentView='jq', recruiterSort={col:'jqs',dir:-1}, selectedRec=-1, activeMonth='all';
+
+function setView(v){
+  currentView=v;
+  const isRec=v==='recruiter';
+  document.getElementById('table-wrap-div')&&(document.getElementById('table-wrap-div').style.display=isRec?'none':'block');
+  document.querySelector('.table-wrap').style.display=isRec?'none':'block';
+  document.getElementById('pagination').style.display=isRec?'none':'';
+  document.getElementById('recruiter-area').style.display=isRec?'block':'none';
+  document.getElementById('search').style.display=isRec?'none':'block';
+  document.getElementById('btn-open').className='status-btn'+((!isRec&&status==='OPEN')?' active':'');
+  document.getElementById('btn-closed').className='status-btn'+((!isRec&&status==='CLOSED')?' active':'');
+  document.getElementById('btn-recruiter').className='status-btn'+(isRec?' active':'');
+  if(isRec)renderRecruiterView();
+}
+
+function setStatus(s){
+  currentView='jq';
+  status=s;page=1;search='';selected=-1;
+  document.getElementById('search').style.display='block';
+  document.querySelector('.table-wrap').style.display='block';
+  document.getElementById('pagination').style.display='';
+  document.getElementById('recruiter-area').style.display='none';
+  document.getElementById('search').value='';
+  document.getElementById('btn-open').className='status-btn'+(s==='OPEN'?' active':'');
+  document.getElementById('btn-closed').className='status-btn'+(s==='CLOSED'?' active':'');
+  document.getElementById('btn-recruiter').className='status-btn';
+  load();
+}
+
+function getMonth(jq){
+  const d=jq.audit_metadata?.updated_on;
+  if(!d)return 'Unknown';
+  const dt=new Date(d);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+}
+
+function renderRecruiterView(){
+  const src=allJQsCache.length?allJQsCache:allData;
+  if(!src.length){document.getElementById('recruiter-area').innerHTML='<div class="empty">No data loaded yet. Please wait for data to load.</div>';return;}
+
+  // Get all months
+  const months=[...new Set(src.map(j=>getMonth(j)))].filter(m=>m!=='Unknown').sort().reverse();
+
+  // Filter by month
+  const filtered=activeMonth==='all'?src:src.filter(j=>getMonth(j)===activeMonth);
+
+  // Group by recruiter
+  const map={};
+  filtered.forEach(j=>{
+    const rec=j.audit_metadata?.added_by||'Unknown';
+    if(!map[rec])map[rec]={email:rec,jqs:[],leads:0,interested:0,notInt:0,qualPass:0,qualFail:0,interview:0};
+    map[rec].jqs.push(j);
+    map[rec].leads+=getSC(j,'SHORTLISTED');
+    map[rec].interested+=getSC(j,'INTERESTED');
+    map[rec].notInt+=getSC(j,'NOT_INTERESTED');
+    map[rec].qualPass+=j._qpass!=null?j._qpass:getSC(j,'QUALIFIED');
+    map[rec].qualFail+=j._qfail||0;
+    map[rec].interview+=getSC(j,'INTERVIEW_SHORTLISTED');
+  });
+
+  let recs=Object.values(map);
+  recs.sort((a,b)=>{
+    const av=recruiterSort.col==='jqs'?a.jqs.length:a[recruiterSort.col];
+    const bv=recruiterSort.col==='jqs'?b.jqs.length:b[recruiterSort.col];
+    return (bv-av)*recruiterSort.dir*-1;
+  });
+
+  // Month filter buttons
+  let html='<div class="month-filter">';
+  html+='<span style="font-size:12px;color:#7799bb;font-weight:600">Filter by month:</span>';
+  html+='<button class="month-btn'+(activeMonth==='all'?' active':'')+'" onclick="setMonth('all')">All time</button>';
+  months.forEach(m=>{
+    const [y,mo]=m.split('-');
+    const label=new Date(y,mo-1).toLocaleString('en',{month:'short',year:'numeric'});
+    html+='<button class="month-btn'+(activeMonth===m?' active':'')+'" onclick="setMonth(''+m+'')">'+label+'</button>';
+  });
+  html+='</div>';
+
+  // Summary stats
+  const totJQs=recs.reduce((s,r)=>s+r.jqs.length,0);
+  const totLeads=recs.reduce((s,r)=>s+r.leads,0);
+  const totInt=recs.reduce((s,r)=>s+r.interested,0);
+
+  html+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">';
+  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Recruiters</div><div class="value c-navy">'+recs.length+'</div></div>';
+  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Total JQs</div><div class="value c-blue">'+totJQs+'</div></div>';
+  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Total Leads</div><div class="value c-green">'+totLeads.toLocaleString()+'</div></div>';
+  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Interested</div><div class="value c-purple">'+totInt.toLocaleString()+'</div></div>';
+  html+='</div>';
+
+  // Recruiter table
+  html+='<div class="table-wrap"><table class="recruiter-table"><thead><tr>';
+  html+='<th onclick="sortRec('email')">Recruiter</th>';
+  html+='<th class="num" onclick="sortRec('jqs')">JQs ↕</th>';
+  html+='<th class="num" onclick="sortRec('leads')">Leads ↕</th>';
+  html+='<th class="num" onclick="sortRec('interested')">Interested ↕</th>';
+  html+='<th class="num" onclick="sortRec('notInt')">Not Interested ↕</th>';
+  html+='<th class="num" onclick="sortRec('qualPass')">Qualify Pass ↕</th>';
+  html+='<th class="num" onclick="sortRec('qualFail')">Qualify Fail ↕</th>';
+  html+='<th class="num" onclick="sortRec('interview')">Interview ↕</th>';
+  html+='</tr></thead><tbody>';
+
+  recs.forEach((r,i)=>{
+    const isExp=selectedRec===i;
+    html+='<tr class="'+(isExp?'expanded-rec':'')+'" onclick="toggleRec('+i+')" style="cursor:pointer">';
+    html+='<td><div class="rec-email">'+r.email+'</div><div class="rec-sub">'+r.jqs.length+' job quer'+(r.jqs.length===1?'y':'ies')+'</div></td>';
+    html+=numCell(r.jqs.length,'c-navy')+numCell(r.leads,'c-leads')+numCell(r.interested,'c-int')+numCell(r.notInt,'c-fail')+numCell(r.qualPass,'c-qual')+numCell(r.qualFail,'c-fail')+numCell(r.interview,'c-int2');
+    html+='</tr>';
+
+    if(isExp){
+      // JQ breakdown
+      html+='<tr class="jq-detail-row"><td colspan="8"><div class="jq-detail-inner">';
+      html+='<table class="jq-mini-table"><thead><tr><th>Job Query</th><th>Last Active</th><th class="num">Leads</th><th class="num">Interested</th><th class="num">Not Int.</th><th class="num">Qual Pass</th><th class="num">Interview</th></tr></thead><tbody>';
+      r.jqs.sort((a,b)=>new Date(b.audit_metadata?.updated_on||0)-new Date(a.audit_metadata?.updated_on||0)).forEach(j=>{
+        const d=j.audit_metadata?.updated_on?new Date(j.audit_metadata.updated_on).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—';
+        html+='<tr>';
+        html+='<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">'+(j.title||j.name||'Untitled')+'</td>';
+        html+='<td style="color:#99aabb;font-size:11px">'+d+'</td>';
+        html+=numCell(getSC(j,'SHORTLISTED'),'c-leads')+numCell(getSC(j,'INTERESTED'),'c-int')+numCell(getSC(j,'NOT_INTERESTED'),'c-fail')+'<td class="num-cell'+(( j._qpass||getSC(j,'QUALIFIED'))>0?' c-qual':' zero')+'" style="text-align:right">'+(j._qpass!=null?j._qpass:getSC(j,'QUALIFIED'))+'</td>'+numCell(getSC(j,'INTERVIEW_SHORTLISTED'),'c-int2');
+        html+='</tr>';
+      });
+      html+='</tbody></table></div></td></tr>';
+    }
+  });
+
+  html+='</tbody></table></div>';
+  document.getElementById('recruiter-area').innerHTML=html;
+}
+
+function numCell(v,cls){
+  return v>0?'<td class="num-cell '+cls+'" style="text-align:right">'+v.toLocaleString()+'</td>':'<td class="num-cell zero" style="text-align:right">0</td>';
+}
+
+function setMonth(m){activeMonth=m;selectedRec=-1;renderRecruiterView();}
+function toggleRec(i){selectedRec=selectedRec===i?-1:i;renderRecruiterView();}
+function sortRec(col){
+  if(recruiterSort.col===col)recruiterSort.dir*=-1;
+  else{recruiterSort.col=col;recruiterSort.dir=-1;}
+  renderRecruiterView();
+}
+
 function toggle(i){selected=selected===i?-1:i;renderTable(allData);}
 function renderPagination(totalPages){
   if(totalPages<=1){document.getElementById("pagination").innerHTML="";return;}
@@ -499,12 +663,12 @@ function setStatus(s){
   document.getElementById("btn-closed").className="status-btn"+(s==="CLOSED"?" active":"");
   load();
 }
-function refreshAll(){load();loadAll().then(()=>loadAllQualify());}
+function refreshAll(){load();loadAll().then(()=>{loadAllQualify();if(currentView==='recruiter')renderRecruiterView();});}
 function toggleToken(){const bar=document.getElementById("token-bar");bar.classList.toggle("open");if(bar.classList.contains("open"))document.getElementById("token-input").focus();}
 function updateToken(){const t=document.getElementById("token-input").value.trim();if(t){alert("Update the TOKEN variable in proxy-bluedart.py and restart.");document.getElementById("token-bar").classList.remove("open");}}
 function toggleAutoRefresh(){autoEnabled=!autoEnabled;document.getElementById("auto-label").textContent=autoEnabled?"Auto — every hour":"Auto — off";if(autoEnabled)autoTimer=setInterval(refreshAll,3600000);else clearInterval(autoTimer);}
 autoTimer=setInterval(refreshAll,3600000);
-load();loadAll().then(()=>loadAllQualify());
+load();loadAll().then(()=>{loadAllQualify();if(currentView==='recruiter')renderRecruiterView();});
 </script>
 </body>
 </html>
