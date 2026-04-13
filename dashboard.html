@@ -150,9 +150,10 @@ if(sessionStorage.getItem("bd_auth")==="1"){
     <div class="stat-card"><div class="label">Active JQs</div><div class="value c-navy" id="s-active">—</div><div class="sub">job queries</div></div>
     <div class="stat-card"><div class="label">Leads uploaded</div><div class="value c-blue" id="s-leads">—</div><div class="sub">total applicants</div></div>
     <div class="stat-card"><div class="label">Interested</div><div class="value c-green" id="s-interested">—</div><div class="sub" id="s-interested-pct">—</div></div>
-    <div class="stat-card"><div class="label">Qualified</div><div class="value c-purple" id="s-qualified">—</div><div class="sub" id="s-qualified-pct">—</div></div>
-    <div class="stat-card"><div class="label">Interview</div><div class="value c-orange" id="s-interview">—</div><div class="sub" id="s-interview-pct">—</div></div>
     <div class="stat-card"><div class="label">Not Interested</div><div class="value c-fail" id="s-not-interested">—</div><div class="sub" id="s-not-interested-pct">—</div></div>
+    <div class="stat-card"><div class="label">Qualify Pass</div><div class="value c-purple" id="s-qualified">—</div><div class="sub" id="s-qualified-pct">—</div></div>
+    <div class="stat-card"><div class="label">Qualify Fail</div><div class="value c-fail" id="s-qual-fail">—</div><div class="sub" id="s-qual-fail-pct">—</div></div>
+    <div class="stat-card"><div class="label">Interview</div><div class="value c-orange" id="s-interview">—</div><div class="sub" id="s-interview-pct">—</div></div>
   </div>
   <div class="charts-row">
     <div class="chart-card">
@@ -238,7 +239,7 @@ async function loadAll(){
 }
 
 function computeStats(data,total){
-  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),notInterested=sumSC(data,"NOT_INTERESTED"),qualified=sumSC(data,"QUALIFIED")||sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),selected=sumSC(data,"COMPANY_APPROVED")||sumSC(data,"SELECTED");
+  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),notInterested=sumSC(data,"NOT_INTERESTED"),qualPass=sumSC(data,"QUALIFIED")||sumSC(data,"EVALUATING"),qualFail=sumSC(data,"COMPANY_REJECTED"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),selected=sumSC(data,"COMPANY_APPROVED")||sumSC(data,"SELECTED");
   document.getElementById("s-active").textContent=total;
   document.getElementById("s-leads").textContent=leads.toLocaleString();
   document.getElementById("s-interested").textContent=interested.toLocaleString();
@@ -254,7 +255,7 @@ function computeStats(data,total){
 }
 
 function renderFunnel(data){
-  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),notInterested=sumSC(data,"NOT_INTERESTED"),qualified=sumSC(data,"QUALIFIED")||sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),selected=sumSC(data,"COMPANY_APPROVED")||sumSC(data,"SELECTED");
+  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),notInterested=sumSC(data,"NOT_INTERESTED"),qualPass=sumSC(data,"QUALIFIED")||sumSC(data,"EVALUATING"),qualFail=sumSC(data,"COMPANY_REJECTED"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),selected=sumSC(data,"COMPANY_APPROVED")||sumSC(data,"SELECTED");
   if(funnelChart)funnelChart.destroy();
   funnelChart=new Chart(document.getElementById("funnel-chart"),{type:"bar",data:{labels:["Leads","Interested","Qualified","Interview","Selected"],datasets:[{data:[leads,interested,qualified,interview,selected],backgroundColor:["#003399","#0066cc","#009900","#cc6600","#007788"],borderRadius:5,borderSkipped:false}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const v=ctx.raw,pct=leads?Math.round(v/leads*100):0;return " "+v.toLocaleString()+" ("+pct+"% of leads)"}}}},scales:{x:{grid:{color:"#eef2fa"},ticks:{color:"#99aabb"}},y:{grid:{display:false},ticks:{color:"#445566",font:{weight:"600"}}}}}});
 }
