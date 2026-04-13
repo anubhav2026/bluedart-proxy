@@ -393,7 +393,10 @@ function renderTable(items){
     html+='<tr class="job-row'+(isExp?" expanded":"")+'" onclick="toggle('+i+')">'
       +'<td><div class="jq-name">'+name+'</div><div class="jq-id">'+id+'</div><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div></td>'
       +'<td style="color:#6688aa;font-size:12px">'+loc+'</td>'
-      +nc(leads,"c-leads")+nc(interested,"c-int")+nc(notInt,"c-fail")+nc(qualPass,"c-qual")+nc(qualFail,"c-fail")+nc(interview,"c-int2")+nc(sel,"c-sel")
+      +nc(leads,"c-leads")+nc(interested,"c-int")+nc(notInt,"c-fail")
+      +(qualPass>0?'<td class="num-cell c-qual" id="qp_'+id+'">'+qualPass.toLocaleString()+'</td>':'<td class="num-cell zero" id="qp_'+id+'">…</td>')
+      +(qualFail>0?'<td class="num-cell c-fail" id="qf_'+id+'">'+qualFail.toLocaleString()+'</td>':'<td class="num-cell zero" id="qf_'+id+'">…</td>')
+      +nc(interview,"c-int2")+nc(sel,"c-sel")
       +'<td style="border-left:2px solid #d0ddf0"><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
     if(isExp){
       const sc=j.worker_status_count||[];
@@ -418,6 +421,61 @@ function renderTable(items){
   document.getElementById("table-area").innerHTML=html;
 }
 
+
+async function fetchQualifyWorkers(jqId){
+  let all=[],pg=1,total=null;
+  do{
+    const data=await fetch("/v1/company/bluedart/job-query/"+jqId+"/qualified-workers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:pg,items_per_page:100,search_key:"",filters:{}})}).then(r=>r.json());
+    const workers=data.data||data.workers||data.results||[];
+    if(total===null)total=data.pagination_info?.total_count||data.total||workers.length;
+    all=[...all,...workers];pg++;
+    if(all.length>=total||workers.length===0)break;
+  }while(true);
+  return all;
+}
+
+async function loadAllQualify(){
+  const jqs=allData.filter?allData.filter(j=>(j.worker_status_count||[]).some(s=>s.status==="EVALUATING"&&s.count>0)):[];
+  if(!jqs.length)return;
+  const CONC=5;let i=0;
+  async function next(){
+    if(i>=jqs.length)return;
+    const jq=jqs[i++];await loadQualify(jq);return next();
+  }
+  await Promise.all(Array.from({length:CONC},next));
+  updateQualifyCards();
+}
+
+async function loadQualify(jq){
+  if(jq._qualifyLoaded)return;
+  jq._qualifyLoaded=true;
+  const jqId=jq.job_query_id||jq.id;
+  try{
+    const workers=await fetchQualifyWorkers(jqId);
+    let pass=0,fail=0;
+    workers.forEach(w=>{
+      const ss=(w.job_query_data?.screening_status||w.screening_status||"").toUpperCase();
+      if(ss==="PASS")pass++;
+      else if(ss==="FAIL")fail++;
+    });
+    jq._qpass=pass;jq._qfail=fail;
+    const passEl=document.getElementById("qp_"+jqId);
+    const failEl=document.getElementById("qf_"+jqId);
+    if(passEl)passEl.textContent=pass;
+    if(failEl)failEl.textContent=fail;
+    updateQualifyCards();
+  }catch(e){console.error("Qualify load error:",e);}
+}
+
+function updateQualifyCards(){
+  const loaded=allData.filter?allData.filter(j=>j._qualifyLoaded):[];
+  const totalPass=loaded.reduce((s,j)=>s+(j._qpass||0),0);
+  const totalFail=loaded.reduce((s,j)=>s+(j._qfail||0),0);
+  const interested=loaded.reduce((s,j)=>s+(j.worker_status_count||[]).find(x=>x.status==="INTERESTED")?.count||0,0);
+  document.getElementById("s-qual-pass").textContent=totalPass.toLocaleString();
+  document.getElementById("s-qual-fail").textContent=totalFail.toLocaleString();
+}
+
 function toggle(i){selected=selected===i?-1:i;renderTable(allData);}
 function renderPagination(totalPages){
   if(totalPages<=1){document.getElementById("pagination").innerHTML="";return;}
@@ -437,12 +495,12 @@ function setStatus(s){
   document.getElementById("btn-closed").className="status-btn"+(s==="CLOSED"?" active":"");
   load();
 }
-function refreshAll(){load();loadAll();}
+function refreshAll(){load();loadAll().then(()=>loadAllQualify());}
 function toggleToken(){const bar=document.getElementById("token-bar");bar.classList.toggle("open");if(bar.classList.contains("open"))document.getElementById("token-input").focus();}
 function updateToken(){const t=document.getElementById("token-input").value.trim();if(t){alert("Update the TOKEN variable in proxy-bluedart.py and restart.");document.getElementById("token-bar").classList.remove("open");}}
 function toggleAutoRefresh(){autoEnabled=!autoEnabled;document.getElementById("auto-label").textContent=autoEnabled?"Auto — every hour":"Auto — off";if(autoEnabled)autoTimer=setInterval(refreshAll,3600000);else clearInterval(autoTimer);}
 autoTimer=setInterval(refreshAll,3600000);
-load();loadAll();
+load();loadAll().then(()=>loadAllQualify());
 </script>
 </body>
 </html>
