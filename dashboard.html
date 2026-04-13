@@ -226,16 +226,33 @@ function sumSC(data,s){return data.reduce((a,j)=>a+getSC(j,s),0);}
 async function loadAll(){
   try{
     const d1=await api(1,"","OPEN",50);
+    if(!d1||!d1.data){console.error("loadAll: bad response",d1);return;}
     const total=d1.pagination_info?.total??d1.total_count??50;
     const pages=Math.min(Math.ceil(total/50),4);
     let all=[...(d1.data||[])];
-    for(let p=2;p<=pages;p++){const dx=await api(p,"","OPEN",50);all=[...all,...(dx.data||[])];}
+    for(let p=2;p<=pages;p++){
+      try{const dx=await api(p,"","OPEN",50);all=[...all,...(dx.data||[])];}
+      catch(e){console.warn("page "+p+" failed",e);break;}
+    }
     computeStats(all,total);
     renderFunnel(all);
     buildRegionData(all);
     renderRegionChart();
     renderRegionTable();
-  }catch(e){console.error(e);}
+  }catch(e){
+    console.error("loadAll error:",e);
+    // Try with smaller page size as fallback
+    try{
+      const d1=await api(1,"","OPEN",20);
+      const all=d1.data||[];
+      const total=d1.pagination_info?.total??d1.total_count??all.length;
+      computeStats(all,total);
+      renderFunnel(all);
+      buildRegionData(all);
+      renderRegionChart();
+      renderRegionTable();
+    }catch(e2){console.error("loadAll fallback error:",e2);}
+  }
 }
 
 function computeStats(data,total){
