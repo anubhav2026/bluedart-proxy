@@ -468,10 +468,10 @@ async function loadQualify(jq){
 }
 
 function updateQualifyCards(){
-  const loaded=allData.filter?allData.filter(j=>j._qualifyLoaded):[];
-  const totalPass=loaded.reduce((s,j)=>s+(j._qpass||0),0);
-  const totalFail=loaded.reduce((s,j)=>s+(j._qfail||0),0);
-  const interested=loaded.reduce((s,j)=>s+(j.worker_status_count||[]).find(x=>x.status==="INTERESTED")?.count||0,0);
+  if(!allData||!allData.length)return;
+  // For loaded JQs use accurate _qpass, for unloaded use QUALIFIED status count
+  const totalPass=allData.reduce((s,j)=>s+(j._qualifyLoaded?j._qpass||0:getSC(j,"QUALIFIED")),0);
+  const totalFail=allData.reduce((s,j)=>s+(j._qualifyLoaded?j._qfail||0:0),0);
   document.getElementById("s-qual-pass").textContent=totalPass.toLocaleString();
   document.getElementById("s-qual-fail").textContent=totalFail.toLocaleString();
 }
