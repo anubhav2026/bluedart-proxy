@@ -170,9 +170,11 @@ if(sessionStorage.getItem("bd_auth")==="1"){
     <div class="stat-card"><div class="label">Leads uploaded</div><div class="value c-blue" id="s-leads">—</div><div class="sub">total applicants</div></div>
     <div class="stat-card"><div class="label">Interested</div><div class="value c-green" id="s-interested">—</div><div class="sub" id="s-interested-pct">—</div></div>
     <div class="stat-card"><div class="label">Not Interested</div><div class="value c-fail" id="s-not-interested">—</div><div class="sub" id="s-not-interested-pct">—</div></div>
-    <div class="stat-card"><div class="label">Qualify Pass</div><div class="value c-purple" id="s-qual-pass">—</div><div class="sub" id="s-qual-pass-pct">—</div></div>
-    <div class="stat-card"><div class="label">Qualify Fail</div><div class="value c-fail" id="s-qual-fail">—</div><div class="sub" id="s-qual-fail-pct">—</div></div>
+    <div class="stat-card"><div class="label">Qual Pass</div><div class="value c-purple" id="s-qual-pass">—</div><div class="sub" id="s-qual-pass-pct">—</div></div>
+    <div class="stat-card"><div class="label">Qual Fail</div><div class="value c-fail" id="s-qual-fail">—</div><div class="sub" id="s-qual-fail-pct">—</div></div>
+    <div class="stat-card"><div class="label">Qual Pending</div><div class="value c-orange" id="s-qual-pending">—</div><div class="sub" id="s-qual-pending-pct">—</div></div>
     <div class="stat-card"><div class="label">Interview</div><div class="value c-orange" id="s-interview">—</div><div class="sub" id="s-interview-pct">—</div></div>
+    <div class="stat-card"><div class="label">Selected</div><div class="value c-teal" id="s-selected">—</div><div class="sub" id="s-selected-pct">—</div></div>
   </div>
   <div class="charts-row">
     <div class="chart-card">
@@ -265,7 +267,7 @@ async function loadAll(){
 }
 
 function computeStats(data,total){
-  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),notInterested=sumSC(data,"NOT_INTERESTED"),qualPass=sumSC(data,"QUALIFIED"),qualFail=Math.max(0,sumSC(data,"EVALUATING")-sumSC(data,"QUALIFIED")),interview=sumSC(data,"INTERVIEW_SHORTLISTED");
+  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),notInterested=sumSC(data,"NOT_INTERESTED"),qualPass=sumSC(data,"QUALIFIED"),qualFail=0,qualPending=sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),selected=sumSC(data,"COMPANY_APPROVED")+sumSC(data,"SELECTED");
   document.getElementById("s-active").textContent=total;
   document.getElementById("s-leads").textContent=leads.toLocaleString();
   document.getElementById("s-interested").textContent=interested.toLocaleString();
@@ -276,8 +278,12 @@ function computeStats(data,total){
   document.getElementById("s-qual-pass-pct").textContent=leads?Math.round(qualPass/leads*100)+"% of leads":"—";
   document.getElementById("s-qual-fail").textContent=qualFail.toLocaleString();
   document.getElementById("s-qual-fail-pct").textContent=leads?Math.round(qualFail/leads*100)+"% of leads":"—";
+  document.getElementById("s-qual-pending").textContent=qualPending.toLocaleString();
+  document.getElementById("s-qual-pending-pct").textContent=leads?Math.round(qualPending/leads*100)+"% of leads":"—";
   document.getElementById("s-interview").textContent=interview.toLocaleString();
   document.getElementById("s-interview-pct").textContent=leads?Math.round(interview/leads*100)+"% of leads":"—";
+  document.getElementById("s-selected").textContent=selected.toLocaleString();
+  document.getElementById("s-selected-pct").textContent=leads?Math.round(selected/leads*100)+"% of leads":"—";
   const now=new Date();
   document.getElementById("topbar-info").innerHTML="Updated "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" · <b>"+total+" active JQs</b>";
 }
@@ -405,11 +411,11 @@ async function load(){
 function renderTable(items){
   if(!items.length){document.getElementById("table-area").innerHTML='<div class="empty">No job queries found.</div>';return;}
   const maxLeads=Math.max(...items.map(j=>getSC(j,"SHORTLISTED")),1);
-  let html='<table><thead><tr><th>Job Query</th><th>Location</th><th class="num c-leads">Leads</th><th class="num c-int">Interested</th><th class="num c-fail">Not interested</th><th class="num c-qual">Qualify pass</th><th class="num c-fail">Qualify fail</th><th class="num c-int2">Interview</th><th class="num c-sel">Selected</th><th style="border-left:2px solid #d0ddf0">Status</th></tr></thead><tbody>';
+  let html='<table><thead><tr><th>Job Query</th><th>Location</th><th class="num c-leads">Leads</th><th class="num c-int">Interested</th><th class="num c-fail">Not interested</th><th class="num c-qual">Qualify pass</th><th class="num c-fail">Qualify fail</th><th class="num c-int2">Interview</th><th class="num c-orange">Qual Pending</th><th class="num c-sel">Selected</th><th class="num c-fail">Rejected</th><th style="border-left:2px solid #d0ddf0">Status</th></tr></thead><tbody>';
   items.forEach((j,i)=>{
     const name=j.title||j.name||"Untitled",id=j.job_query_id||j.id||"";
     const loc=[j.job_locality,j.custom_job_district].filter(Boolean).join(", ")||[j.job_district,j.job_state].filter(Boolean).join(", ")||"—";
-    const leads=getSC(j,"SHORTLISTED"),interested=getSC(j,"INTERESTED"),notInt=getSC(j,"NOT_INTERESTED"),qualPass=getSC(j,"QUALIFIED"),qualFail=Math.max(0,getSC(j,"EVALUATING")-getSC(j,"QUALIFIED")),interview=getSC(j,"INTERVIEW_SHORTLISTED"),sel=(getSC(j,"COMPANY_APPROVED")||0)+(getSC(j,"SELECTED")||0);
+    const leads=getSC(j,"SHORTLISTED"),interested=getSC(j,"INTERESTED"),notInt=getSC(j,"NOT_INTERESTED"),qualPass=j._qpass!=null?j._qpass:getSC(j,"QUALIFIED"),qualFail=j._qfail||0,qualPending=j._qpending!=null?j._qpending:getSC(j,"EVALUATING"),interview=getSC(j,"INTERVIEW_SHORTLISTED"),sel=getSC(j,"COMPANY_APPROVED")+getSC(j,"SELECTED"),rejected=getSC(j,"REJECTED")+getSC(j,"COMPANY_REJECTED");
     const pct=leads?Math.round(leads/maxLeads*100):0,st=j.job_query_status||status,isExp=selected===i;
     const nc=(v,cls)=>v>0?'<td class="num-cell '+cls+'">'+v.toLocaleString()+'</td>':'<td class="num-cell zero">0</td>';
     html+='<tr class="job-row'+(isExp?" expanded":"")+'" onclick="toggle('+i+')">'
@@ -418,11 +424,11 @@ function renderTable(items){
       +nc(leads,"c-leads")+nc(interested,"c-int")+nc(notInt,"c-fail")
       +(qualPass>0?'<td class="num-cell c-qual" id="qp_'+id+'">'+qualPass.toLocaleString()+'</td>':'<td class="num-cell zero" id="qp_'+id+'">0</td>')
       +('<td class="num-cell'+(j._qfail>0?' c-fail':' zero')+'" id="qf_'+id+'">'+(j._qfail!=null?j._qfail.toLocaleString():'…')+'</td>')
-      +nc(interview,"c-int2")+nc(sel,"c-sel")
+      +nc(interview,"c-int2")+(qualPending>0?'<td class="num-cell c-orange" id="qpend_'+id+'" style="text-align:right">'+qualPending.toLocaleString()+'</td>':'<td class="num-cell zero" id="qpend_'+id+'" style="text-align:right">0</td>')+nc(sel,"c-sel")+nc(rejected,"c-fail")
       +'<td style="border-left:2px solid #d0ddf0"><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
     if(isExp){
       const sc=j.worker_status_count||[];
-      html+='<tr class="detail-row"><td colspan="10"><div class="detail-inner">'
+      html+='<tr class="detail-row"><td colspan="12"><div class="detail-inner">'
         +'<div class="di"><div class="dk">Job ID</div><div class="dv" style="font-size:11px;font-family:monospace">'+id+'</div></div>'
         +'<div class="di"><div class="dk">Role</div><div class="dv">'+(j.custom_job_role||j.job_role||"—")+'</div></div>'
         +'<div class="di"><div class="dk">Openings</div><div class="dv">'+(j.number_of_openings??j.openings??"—")+'</div></div>'
@@ -495,10 +501,13 @@ function updateQualifyCards(){
   const leads=src.reduce((s,j)=>s+getSC(j,"SHORTLISTED"),0);
   const totalPass=src.reduce((s,j)=>s+(j._qualifyLoaded?j._qpass||0:getSC(j,"QUALIFIED")),0);
   const totalFail=src.reduce((s,j)=>s+(j._qualifyLoaded?j._qfail||0:0),0);
+  const totalPending=src.reduce((s,j)=>s+(j._qualifyLoaded?j._qpending||0:getSC(j,"EVALUATING")),0);
   document.getElementById("s-qual-pass").textContent=totalPass.toLocaleString();
   document.getElementById("s-qual-pass-pct").textContent=leads?Math.round(totalPass/leads*100)+"% of leads":"—";
   document.getElementById("s-qual-fail").textContent=totalFail.toLocaleString();
   document.getElementById("s-qual-fail-pct").textContent=leads?Math.round(totalFail/leads*100)+"% of leads":"—";
+  document.getElementById("s-qual-pending").textContent=totalPending.toLocaleString();
+  document.getElementById("s-qual-pending-pct").textContent=leads?Math.round(totalPending/leads*100)+"% of leads":"—";
 }
 
 
@@ -533,7 +542,7 @@ function renderRecruiterView(){
   var map={};
   filtered.forEach(function(j){
     var rec=(j.audit_metadata&&j.audit_metadata.added_by)||"Unknown";
-    if(!map[rec])map[rec]={email:rec,jqs:[],leads:0,interested:0,notInt:0,qualPass:0,qualFail:0,interview:0};
+    if(!map[rec])map[rec]={email:rec,jqs:[],leads:0,interested:0,notInt:0,qualPass:0,qualFail:0,qualPending:0,interview:0,selected:0,rejected:0};
     map[rec].jqs.push(j);
     map[rec].leads+=getSC(j,"SHORTLISTED");
     map[rec].interested+=getSC(j,"INTERESTED");
@@ -541,6 +550,9 @@ function renderRecruiterView(){
     map[rec].qualPass+=j._qpass!=null?j._qpass:getSC(j,"QUALIFIED");
     map[rec].qualFail+=j._qfail||0;
     map[rec].interview+=getSC(j,"INTERVIEW_SHORTLISTED");
+    map[rec].qualPending+=j._qpending!=null?j._qpending:getSC(j,"EVALUATING");
+    map[rec].selected+=getSC(j,"COMPANY_APPROVED")+getSC(j,"SELECTED");
+    map[rec].rejected+=getSC(j,"REJECTED")+getSC(j,"COMPANY_REJECTED");
   });
   var recs=Object.values(map);
   var col=recruiterSort.col;
@@ -579,17 +591,20 @@ function renderRecruiterView(){
   html+='<th class="num" onclick="sortRec(this.dataset.c)" data-c="notInt">Not Interested ↕</th>';
   html+='<th class="num" onclick="sortRec(this.dataset.c)" data-c="qualPass">Qualify Pass ↕</th>';
   html+='<th class="num" onclick="sortRec(this.dataset.c)" data-c="qualFail">Qualify Fail ↕</th>';
+  html+='<th class="num" onclick="sortRec(this.dataset.c)" data-c="qualPending">Qual Pending ↕</th>';
   html+='<th class="num" onclick="sortRec(this.dataset.c)" data-c="interview">Interview ↕</th>';
+  html+='<th class="num" onclick="sortRec(this.dataset.c)" data-c="selected">Selected ↕</th>';
+  html+='<th class="num" onclick="sortRec(this.dataset.c)" data-c="rejected">Rejected ↕</th>';
   html+='</tr></thead><tbody>';
 
   recs.forEach(function(r,i){
     var isExp=selectedRec===i;
     html+='<tr class="'+(isExp?"expanded-rec":"")+'" onclick="toggleRec('+i+')" style="cursor:pointer">';
     html+='<td><div class="rec-email">'+r.email+'</div><div class="rec-sub">'+r.jqs.length+' JQ'+(r.jqs.length===1?"":"s")+'</div></td>';
-    html+=nC(r.jqs.length,"c-navy")+nC(r.leads,"c-leads")+nC(r.interested,"c-int")+nC(r.notInt,"c-fail")+nC(r.qualPass,"c-qual")+nC(r.qualFail,"c-fail")+nC(r.interview,"c-int2");
+    html+=nC(r.jqs.length,"c-navy")+nC(r.leads,"c-leads")+nC(r.interested,"c-int")+nC(r.notInt,"c-fail")+nC(r.qualPass,"c-qual")+nC(r.qualFail,"c-fail")+nC(r.qualPending,"c-orange")+nC(r.interview,"c-int2")+nC(r.selected,"c-sel")+nC(r.rejected,"c-fail");
     html+='</tr>';
     if(isExp){
-      html+='<tr class="jq-detail-row"><td colspan="8"><div class="jq-detail-inner">';
+      html+='<tr class="jq-detail-row"><td colspan="11"><div class="jq-detail-inner">';
       html+='<table class="jq-mini-table"><thead><tr><th>Job Query</th><th>Last Active</th><th class="num">Leads</th><th class="num">Interested</th><th class="num">Not Int.</th><th class="num">Qual Pass</th><th class="num">Interview</th></tr></thead><tbody>';
       var sorted=r.jqs.slice().sort(function(a,b){return new Date(b.audit_metadata&&b.audit_metadata.updated_on||0)-new Date(a.audit_metadata&&a.audit_metadata.updated_on||0);});
       sorted.forEach(function(j){
