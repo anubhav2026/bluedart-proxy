@@ -480,17 +480,20 @@ async function loadQualify(jq){
   const jqId=jq.job_query_id||jq.id;
   try{
     const workers=await fetchQualifyWorkers(jqId);
-    let pass=0,fail=0;
+    let pass=0,fail=0,pending=0;
     workers.forEach(w=>{
       const ss=(w.job_query_data?.screening_status||w.screening_status||"").toUpperCase();
       if(ss==="PASS")pass++;
       else if(ss==="FAIL")fail++;
+      else if(ss==="PENDING")pending++;
     });
-    jq._qpass=pass;jq._qfail=fail;
+    jq._qpass=pass;jq._qfail=fail;jq._qpending=pending;
     const passEl=document.getElementById("qp_"+jqId);
     const failEl=document.getElementById("qf_"+jqId);
+    const pendEl=document.getElementById("qpend_"+jqId);
     if(passEl)passEl.textContent=pass;
     if(failEl)failEl.textContent=fail;
+    if(pendEl)pendEl.textContent=pending;
     updateQualifyCards();
   }catch(e){console.error("Qualify load error:",e);}
 }
