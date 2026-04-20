@@ -711,32 +711,56 @@ async function loadNotInterestedInsights(allJQs) {
 }
 
 async function analyzeWithClaude(summaries, jqCount) {
-  try {
-    const sampleSize = Math.min(summaries.length, 150);
-    const sample = summaries.slice(0, sampleSize);
-    const summaryList = sample.map((s,i) => (i+1)+". "+s).join("\n");
-    const prompt = "You are analyzing call summaries from a recruitment AI bot for Blue Dart (a logistics company in India). These are reasons why candidates said NOT INTERESTED in the job.\n\nAnalyze these "+sampleSize+" summaries and identify TOP 10 most common reasons. For each:\n1. Short label (5-8 words)\n2. Approximate count\n3. Order by frequency\n\nSummaries:\n"+summaryList+"\n\nRespond ONLY with JSON array, no markdown:\n[{\"rank\":1,\"reason\":\"Label\",\"count\":45,\"detail\":\"One sentence\"}]";
+  // Keyword-based clustering - no API needed
+  const patterns = [
+    {reason: "Not interested in job role/opportunity", keys: ["not interested in the job","not interested in this job","not interested in the role","did not show interest in the role","not interested in the opportunity","not interested in joining"]},
+    {reason: "Salary/compensation too low", keys: ["salary","pay","compensation","wage","income","stipend","low pay","not satisfied with salary","salary expectation","salary not matching"]},
+    {reason: "Location too far / relocation issue", keys: ["location","distance","far","relocat","travel","commute","not nearby","too far","city","place"]},
+    {reason: "Already employed elsewhere", keys: ["already working","currently working","already employed","have a job","other job","another job","already placed","current job"]},
+    {reason: "Not reachable / did not pick up", keys: ["not pick","did not pick","not reachable","unreachable","not connected","no response","not available","busy","switched off"]},
+    {reason: "Personal reasons / family issues", keys: ["personal","family","health","medical","illness","domestic","personal reason","family reason","home"]},
+    {reason: "Not interested in delivery/field work", keys: ["delivery","field work","outdoor","physical","riding","bike","driving","not interested in delivery"]},
+    {reason: "Looking for office/desk job", keys: ["office","desk","indoor","sitting","computer","white collar","office job","office work"]},
+    {reason: "Already selected elsewhere", keys: ["already selected","already joined","joining","selected somewhere","got another offer","offer letter","other offer"]},
+    {reason: "No response / not engaged", keys: ["no summary","not engaged","did not engage","no answer","no reply","not responding","silent"]}
+  ];
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{role: "user", content: prompt}]
-      })
-    });
+  const counts = patterns.map(p => ({...p, count: 0, examples: []}));
+  const unmatched = [];
 
-    const data = await response.json();
-    const text = data.content[0].text.trim();
-    const clean = text.replace(/```json|```/g, "").trim();
-    const reasons = JSON.parse(clean);
-    renderInsights(reasons, summaries.length, jqCount);
-  } catch(e) {
-    console.error("Claude analysis error:", e);
-    document.getElementById("insights-body").innerHTML =
-      "<div style=\"color:#cc3333;font-size:13px\">Error: " + e.message + "</div>";
+  summaries.forEach(s => {
+    const sl = s.toLowerCase();
+    let matched = false;
+    for(let i = 0; i < counts.length; i++) {
+      if(counts[i].keys.some(k => sl.includes(k))) {
+        counts[i].count++;
+        if(counts[i].examples.length < 2) counts[i].examples.push(s);
+        matched = true;
+        break;
+      }
+    }
+    if(!matched) unmatched.push(s);
+  });
+
+  // Sort by count
+  counts.sort((a,b) => b.count - a.count);
+
+  // Add unmatched as "Other reasons"
+  if(unmatched.length > 0) {
+    counts.push({reason: "Other / unclear reasons", count: unmatched.length, keys: [], examples: unmatched.slice(0,2)});
   }
+
+  const reasons = counts
+    .filter(r => r.count > 0)
+    .slice(0, 10)
+    .map((r, i) => ({
+      rank: i+1,
+      reason: r.reason,
+      count: r.count,
+      detail: r.examples[0] ? r.examples[0].substring(0,100)+"..." : ""
+    }));
+
+  renderInsights(reasons, summaries.length, jqCount);
 }
 
 function renderInsights(reasons, totalSummaries, jqCount) {
