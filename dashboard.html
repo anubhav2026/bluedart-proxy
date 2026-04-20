@@ -497,9 +497,9 @@ async function loadQualify(jq){
     const passEl=document.getElementById("qp_"+jqId);
     const failEl=document.getElementById("qf_"+jqId);
     const pendEl=document.getElementById("qpend_"+jqId);
-    if(passEl)passEl.textContent=pass;
-    if(failEl)failEl.textContent=fail;
-    if(pendEl)pendEl.textContent=pending;
+    if(passEl){passEl.textContent=pass;passEl.className="num-cell"+(pass>0?" c-qual":" zero");}
+    if(failEl){failEl.textContent=fail;failEl.className="num-cell"+(fail>0?" c-fail":" zero");}
+    if(pendEl){pendEl.textContent=pending;pendEl.className="num-cell"+(pending>0?" c-orange":" zero");}
     updateQualifyCards();
   }catch(e){console.error("Qualify load error:",e);}
 }
