@@ -497,9 +497,9 @@ async function loadQualify(jq){
     const passEl=document.getElementById("qp_"+jqId);
     const failEl=document.getElementById("qf_"+jqId);
     const pendEl=document.getElementById("qpend_"+jqId);
-    if(passEl){passEl.textContent=pass;passEl.className="num-cell"+(pass>0?" c-qual":" zero");}
-    if(failEl){failEl.textContent=fail;failEl.className="num-cell"+(fail>0?" c-fail":" zero");}
-    if(pendEl){pendEl.textContent=pending;pendEl.className="num-cell"+(pending>0?" c-orange":" zero");}
+    if(passEl){passEl.textContent=pass;passEl.className="num-cell"+(pass>0?" c-qual":" zero");passEl.style.color=pass>0?"#6633cc":"#ccddee";passEl.style.textAlign="right";}
+    if(failEl){failEl.textContent=fail;failEl.className="num-cell"+(fail>0?" c-fail":" zero");failEl.style.color=fail>0?"#cc3333":"#ccddee";failEl.style.textAlign="right";}
+    if(pendEl){pendEl.textContent=pending;pendEl.className="num-cell"+(pending>0?" c-orange":" zero");pendEl.style.color=pending>0?"#cc6600":"#ccddee";pendEl.style.textAlign="right";}
     updateQualifyCards();
   }catch(e){console.error("Qualify load error:",e);}
 }
