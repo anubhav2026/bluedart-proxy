@@ -278,7 +278,7 @@ async function loadAll(){
 }
 
 function computeStats(data,total){
-  const leads=sumSC(data,"SHORTLISTED"),interested=sumSC(data,"INTERESTED"),notInterested=sumSC(data,"NOT_INTERESTED"),qualPass=sumSC(data,"QUALIFIED"),qualFail=0,qualPending=sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),selected=sumSC(data,"COMPANY_APPROVED")+sumSC(data,"SELECTED");
+  const leads=sumSC(data,"SHORTLISTED"),notInterested=sumSC(data,"NOT_INTERESTED"),interested=Math.max(0,sumSC(data,"INTERESTED")-notInterested),qualPass=sumSC(data,"QUALIFIED"),qualFail=0,qualPending=sumSC(data,"EVALUATING"),interview=sumSC(data,"INTERVIEW_SHORTLISTED"),selected=sumSC(data,"COMPANY_APPROVED")+sumSC(data,"SELECTED");
   document.getElementById("s-active").textContent=total;
   document.getElementById("s-leads").textContent=leads.toLocaleString();
   document.getElementById("s-interested").textContent=interested.toLocaleString();
@@ -421,7 +421,7 @@ function renderTable(items){
   items.forEach((j,i)=>{
     const name=j.title||j.name||"Untitled",id=j.job_query_id||j.id||"";
     const loc=[j.job_locality,j.custom_job_district].filter(Boolean).join(", ")||[j.job_district,j.job_state].filter(Boolean).join(", ")||"—";
-    const leads=getSC(j,"SHORTLISTED"),interested=getSC(j,"INTERESTED"),notInt=getSC(j,"NOT_INTERESTED"),qualPass=j._qpass!=null?j._qpass:getSC(j,"QUALIFIED"),qualFail=j._qfail||0,qualPending=j._qpending!=null?j._qpending:getSC(j,"EVALUATING"),interview=getSC(j,"INTERVIEW_SHORTLISTED"),sel=getSC(j,"COMPANY_APPROVED")+getSC(j,"SELECTED"),rejected=getSC(j,"REJECTED")+getSC(j,"COMPANY_REJECTED");
+    const leads=getSC(j,"SHORTLISTED"),notInt=getSC(j,"NOT_INTERESTED"),interested=Math.max(0,getSC(j,"INTERESTED")-notInt),qualPass=j._qpass!=null?j._qpass:getSC(j,"QUALIFIED"),qualFail=j._qfail||0,qualPending=j._qpending!=null?j._qpending:getSC(j,"EVALUATING"),interview=getSC(j,"INTERVIEW_SHORTLISTED"),sel=getSC(j,"COMPANY_APPROVED")+getSC(j,"SELECTED"),rejected=getSC(j,"REJECTED")+getSC(j,"COMPANY_REJECTED");
     const pct=leads?Math.round(leads/maxLeads*100):0,st=j.job_query_status||status,isExp=selected===i;
     const nc=(v,cls)=>v>0?'<td class="num-cell '+cls+'">'+v.toLocaleString()+'</td>':'<td class="num-cell zero">0</td>';
     html+='<tr class="job-row'+(isExp?" expanded":"")+'" onclick="toggle('+i+')">'
@@ -554,7 +554,7 @@ function renderRecruiterView(){
     if(!map[rec])map[rec]={email:rec,jqs:[],leads:0,interested:0,notInt:0,qualPass:0,qualFail:0,qualPending:0,interview:0,selected:0,rejected:0};
     map[rec].jqs.push(j);
     map[rec].leads+=getSC(j,"SHORTLISTED");
-    map[rec].interested+=getSC(j,"INTERESTED");
+    map[rec].interested+=Math.max(0,getSC(j,"INTERESTED")-getSC(j,"NOT_INTERESTED"));
     map[rec].notInt+=getSC(j,"NOT_INTERESTED");
     map[rec].qualPass+=j._qpass!=null?j._qpass:getSC(j,"QUALIFIED");
     map[rec].qualFail+=j._qfail||0;
