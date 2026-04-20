@@ -187,7 +187,7 @@ if(sessionStorage.getItem("bd_auth")==="1"){
     <div class="chart-card" id="insights-card">
       <h3>Top reasons — Not Interested</h3>
       <div class="subtitle" id="insights-subtitle">Fetching call summaries across JQs...</div>
-      <div id="insights-body" style="min-height:200px;display:flex;align-items:center;justify-content:center">
+      <div id="insights-body" style="max-height:220px;overflow-y:auto;display:flex;align-items:center;justify-content:center">
         <div style="color:#99aabb;font-size:13px">⏳ Analyzing call summaries...</div>
       </div>
       <div id="insights-footer" style="font-size:11px;color:#aabbcc;margin-top:10px;display:none"></div>
@@ -765,7 +765,7 @@ async function analyzeWithClaude(summaries, jqCount) {
 
 function renderInsights(reasons, totalSummaries, jqCount) {
   const maxCount = reasons[0] ? reasons[0].count : 1;
-  let html = '<div style="display:flex;flex-direction:column;gap:0">';
+  let html = '<div>';
   reasons.slice(0, 10).forEach(function(r) {
     const pct = Math.round(r.count / totalSummaries * 100);
     const barWidth = Math.round(r.count / maxCount * 100);
