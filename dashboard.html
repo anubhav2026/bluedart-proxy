@@ -764,28 +764,27 @@ async function analyzeWithClaude(summaries, jqCount) {
 }
 
 function renderInsights(reasons, totalSummaries, jqCount) {
-  const maxCount = reasons[0]?.count || 1;
-  let html = '';
-  reasons.slice(0, 10).forEach((r, i) => {
+  const maxCount = reasons[0] ? reasons[0].count : 1;
+  let html = '<div style="display:flex;flex-direction:column;gap:0">';
+  reasons.slice(0, 10).forEach(function(r) {
     const pct = Math.round(r.count / totalSummaries * 100);
     const barWidth = Math.round(r.count / maxCount * 100);
-    html += `<div class="reason-item">
-      <div class="reason-rank">${r.rank}</div>
-      <div style="flex:1">
-        <div class="reason-text">${r.reason}</div>
-        <div style="font-size:11px;color:#6688aa;margin-top:2px">${r.detail}</div>
-        <div class="reason-bar"><div class="reason-bar-fill" style="width:${barWidth}%"></div></div>
-      </div>
-      <div class="reason-count">~${r.count} (${pct}%)</div>
-    </div>`;
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eef2fa">';
+    html += '<div style="font-size:16px;font-weight:800;color:#003399;min-width:24px;text-align:center">'+r.rank+'</div>';
+    html += '<div style="flex:1;min-width:0">';
+    html += '<div style="font-size:13px;font-weight:600;color:#1a2a3a">'+r.reason+'</div>';
+    html += '<div style="height:3px;background:#e0e8f4;border-radius:2px;margin-top:4px"><div style="height:100%;background:#003399;border-radius:2px;width:'+barWidth+'%"></div></div>';
+    html += '</div>';
+    html += '<div style="font-size:12px;color:#7799bb;white-space:nowrap;text-align:right"><b>'+r.count+'</b><br>'+pct+'%</div>';
+    html += '</div>';
   });
+  html += '</div>';
 
   document.getElementById("insights-body").innerHTML = html;
   document.getElementById("insights-subtitle").textContent =
     "Based on " + totalSummaries + " AI call summaries across " + jqCount + " JQs";
   document.getElementById("insights-footer").style.display = "block";
-  document.getElementById("insights-footer").textContent =
-    "Powered by Claude AI · Updates on refresh";
+  document.getElementById("insights-footer").textContent = "Keyword analysis · Updates on refresh";
 }
 
 function toggle(i){selected=selected===i?-1:i;renderTable(allData);}
