@@ -429,7 +429,7 @@ function renderTable(items){
       +'<td style="color:#6688aa;font-size:12px">'+loc+'</td>'
       +nc(leads,"c-leads")+nc(interested,"c-int")+nc(notInt,"c-fail")
       +(qualPass>0?'<td class="num-cell c-qual" id="qp_'+id+'">'+qualPass.toLocaleString()+'</td>':'<td class="num-cell zero" id="qp_'+id+'">0</td>')
-      +('<td class="num-cell'+(j._qfail>0?' c-fail':' zero')+'" id="qf_'+id+'">'+(j._qfail!=null?j._qfail.toLocaleString():'…')+'</td>')
+      +(j._qualifyLoaded?(qualFail>0?'<td class="num-cell c-fail" id="qf_'+id+'" style="text-align:right">'+qualFail.toLocaleString()+'</td>':'<td class="num-cell zero" id="qf_'+id+'" style="text-align:right">0</td>'):'<td class="num-cell zero" id="qf_'+id+'" style="text-align:right;color:#ccddee">…</td>')
       +nc(interview,"c-int2")+(qualPending>0?'<td class="num-cell c-orange" id="qpend_'+id+'" style="text-align:right">'+qualPending.toLocaleString()+'</td>':'<td class="num-cell zero" id="qpend_'+id+'" style="text-align:right">0</td>')+nc(sel,"c-sel")+nc(rejected,"c-fail")
       +'<td style="border-left:2px solid #d0ddf0"><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
     if(isExp){
