@@ -780,7 +780,12 @@ function renderInsights(reasons, totalSummaries, jqCount) {
   });
   html += '</div>';
 
-  document.getElementById("insights-body").innerHTML = html;
+  const body = document.getElementById("insights-body");
+  body.style.display = "block";
+  body.style.justifyContent = "";
+  body.style.alignItems = "";
+  body.innerHTML = html;
+  body.scrollTop = 0;
   document.getElementById("insights-subtitle").textContent =
     "Based on " + totalSummaries + " AI call summaries across " + jqCount + " JQs";
   document.getElementById("insights-footer").style.display = "block";
