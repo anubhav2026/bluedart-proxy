@@ -4,138 +4,281 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Blue Dart — Job Query Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
+:root{
+  /* surfaces — dark fontvibe */
+  --canvas:#08070f;
+  --ink:#f1eefb;
+  --muted:#a59fc2;
+  --label:#837db0;
+  --line:rgba(255,255,255,.09);
+  --line-soft:rgba(255,255,255,.055);
+  --surface:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.022));
+  --surface-solid:#171326;
+  /* brand / accent */
+  --navy:#2f8fef;
+  --navy-deep:#1f6fd0;
+  --brand-green:#34d39a;
+  --violet:#23c98a;
+  --grad:linear-gradient(135deg,#2f8fef,#1fc77d);
+  /* neon status palette on dark */
+  --c-leads:#5b8cff;
+  --c-int:#34d39a;
+  --c-fail:#fb7185;
+  --c-qual:#a78bfa;
+  --c-pending:#fbbf24;
+  --c-int2:#fb923c;
+  --c-sel:#22d3ee;
+  --c-navy:#8b9bff;
+  /* shadows */
+  --sh-sm:0 1px 2px rgba(0,0,0,.4);
+  --sh-card:inset 0 1px 0 rgba(255,255,255,.05), 0 22px 44px -30px rgba(0,0,0,.85);
+  --sh-pop:0 30px 64px -26px rgba(20,120,150,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  --radius:18px;
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f4fa;color:#1a2a3a;font-size:14px}
+html,body{height:100%}
+body{
+  font-family:"Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--ink);
+  font-size:14px;
+  line-height:1.4;
+  background:
+    radial-gradient(1150px 660px at 50% -200px, rgba(22,110,200,.34), transparent 62%),
+    radial-gradient(900px 540px at 100% 6%, rgba(18,150,108,.22), transparent 58%),
+    radial-gradient(760px 560px at 0% 16%, rgba(20,120,170,.14), transparent 60%),
+    linear-gradient(158deg, #05131c 0%, #06191c 52%, #07211d 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
 a{color:inherit;text-decoration:none}
-.topbar{background:#003399;padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,51,153,.3)}
-.topbar-left{display:flex;align-items:center;gap:12px}
-.brand{font-size:18px;font-weight:800;letter-spacing:.5px}
-.brand .blue{color:#fff}.brand .green{color:#66ff66}
-.divider{color:#ffffff44;font-size:20px}
-.page-title{font-size:13px;color:#aabddd}
-.topbar-center{font-size:12px;color:#aabddd}
-.topbar-center b{color:#fff}
-.topbar-right{display:flex;align-items:center;gap:10px}
-.auto-badge{background:#002277;border:1px solid #0044bb;border-radius:20px;padding:5px 14px;font-size:12px;color:#aabddd;cursor:pointer}
-.btn-refresh{background:#009900;color:white;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-refresh:hover{background:#00bb00}
-.token-bar{background:#e8eef8;border-bottom:1px solid #ccd8ee;padding:8px 24px;cursor:pointer;font-size:12px;color:#6688aa;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.token-bar input{background:#fff;border:1px solid #b0c4de;border-radius:6px;padding:6px 10px;color:#333;font-size:12px;width:560px;margin-top:4px;display:none;outline:none}
+.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ───── HEADER ───── */
+.topbar{
+  background:rgba(10,9,18,.66);
+  backdrop-filter:saturate(150%) blur(18px);
+  -webkit-backdrop-filter:saturate(150%) blur(18px);
+  padding:0 28px;height:66px;display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  border-bottom:1px solid var(--line);
+  box-shadow:0 16px 40px -30px rgba(0,0,0,.9);
+}
+.topbar-left{display:flex;align-items:center;gap:15px}
+.brand-logo{height:38px;width:auto;display:block;background:#fff;padding:5px 11px;border-radius:10px;box-shadow:0 6px 18px -8px rgba(0,0,0,.6)}
+.brand-sep{width:1px;height:24px;background:var(--line);}
+.page-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.page-title::before{content:"✦";color:var(--violet);font-size:12px}
+.demo-badge{display:none;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#f3cd7a;
+  background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:999px;padding:4px 11px;letter-spacing:.02em}
+.demo-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#fbbf24;box-shadow:0 0 10px #fbbf24}
+.topbar-center{font-size:12.5px;color:var(--muted);letter-spacing:.01em}
+.topbar-center b{color:var(--ink);font-weight:600}
+.topbar-center .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand-green);margin-right:7px;vertical-align:middle;box-shadow:0 0 10px var(--brand-green)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.auto-badge{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:8px 15px;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer;transition:.16s;display:flex;align-items:center;gap:8px}
+.auto-badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--brand-green);box-shadow:0 0 8px var(--brand-green)}
+.auto-badge.off::before{background:#5a5570;box-shadow:none}
+.auto-badge:hover{border-color:rgba(255,255,255,.2);color:var(--ink)}
+.btn-refresh{background:var(--grad);color:#fff;border:none;border-radius:11px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:.16s;box-shadow:0 12px 28px -12px rgba(47,143,239,.8);display:flex;align-items:center;gap:7px}
+.btn-refresh:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.btn-refresh:active{transform:translateY(0)}
+
+/* ───── TOKEN BAR ───── */
+.token-bar{background:rgba(255,255,255,.025);border-bottom:1px solid var(--line);padding:9px 28px;cursor:pointer;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;transition:.16s}
+.token-bar:hover{background:rgba(255,255,255,.05)}
+.token-bar input{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--ink);font-size:12.5px;font-family:inherit;width:560px;max-width:100%;margin-top:6px;display:none;outline:none}
+.token-bar input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(47,143,239,.25)}
 .token-bar.open input{display:block}
-.main{padding:20px 24px;max-width:1400px;margin:0 auto}
-.stat-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-.stat-card{background:#fff;border:1px solid #d0ddf0;border-radius:10px;padding:16px 20px;flex:1;min-width:130px;box-shadow:0 1px 4px rgba(0,51,153,.06)}
-.stat-card .label{font-size:11px;color:#7799bb;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.stat-card .value{font-size:26px;font-weight:700}
-.stat-card .sub{font-size:12px;color:#99aabb;margin-top:4px}
-.c-navy{color:#003399}.c-blue{color:#0055cc}.c-green{color:#009900}.c-purple{color:#6633cc}.c-orange{color:#cc6600}.c-teal{color:#007788}
-.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.chart-card{background:#fff;border:1px solid #d0ddf0;border-radius:10px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,51,153,.06)}
-.chart-card h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#7799bb;margin-bottom:4px;font-weight:600}
-.chart-card .subtitle{font-size:11px;color:#aabbcc;margin-bottom:14px}
-.funnel-wrap{position:relative}
-.region-layout{display:flex;gap:16px;align-items:flex-start}
-.donut-wrap{flex-shrink:0;position:relative;width:180px}
-.donut-wrap canvas{width:180px!important;height:180px!important}
+
+/* ───── LAYOUT ───── */
+.main{padding:26px 28px 56px;max-width:1480px;margin:0 auto}
+.section-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:4px 2px 14px;display:flex;align-items:center;gap:7px}
+.section-label::before{content:"✦";color:var(--violet)}
+
+/* ───── STAT CARDS ───── */
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:14px}
+@media(max-width:1180px){.stat-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.stat-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:17px 18px 16px 21px;box-shadow:var(--sh-card);overflow:hidden;transition:.18s;backdrop-filter:blur(6px)}
+.stat-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--violet));box-shadow:0 0 16px var(--accent,var(--violet))}
+.stat-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.18);box-shadow:var(--sh-pop)}
+.stat-card .label{font-size:10.5px;color:var(--label);text-transform:uppercase;letter-spacing:.09em;font-weight:600;margin-bottom:10px;line-height:1.3;min-height:13px}
+.stat-card .value{font-size:31px;font-weight:700;letter-spacing:-.03em;color:var(--accent,var(--ink));line-height:1;font-variant-numeric:tabular-nums}
+.stat-card .sub{font-size:11.5px;color:var(--muted);margin-top:8px;font-weight:500}
+
+/* ───── PANELS ───── */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--sh-card);padding:20px 22px;backdrop-filter:blur(6px)}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
+.panel-title{font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.panel-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.panel-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--violet);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.panel-eyebrow::before{content:"✦"}
+
+/* ───── PIPELINE ───── */
+.pipeline-panel{margin-bottom:18px}
+.pipeline{display:flex;flex-direction:column;gap:11px}
+.pl-row{display:grid;grid-template-columns:118px 1fr 96px;align-items:center;gap:16px}
+.pl-label{font-size:12.5px;font-weight:600;color:var(--ink)}
+.pl-track{height:34px;background:rgba(255,255,255,.05);border:1px solid var(--line-soft);border-radius:9px;overflow:hidden;position:relative;display:flex;align-items:center}
+.pl-fill{height:100%;border-radius:8px;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;min-width:8px;flex-shrink:0;transition:width .9s cubic-bezier(.22,1,.36,1);box-shadow:inset 0 -1px 0 rgba(0,0,0,.2), 0 0 22px -6px currentColor}
+.pl-val{color:#fff;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;text-shadow:0 1px 2px rgba(0,0,0,.4);white-space:nowrap}
+.pl-val-out{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;margin-left:10px;white-space:nowrap}
+.pl-conv{text-align:right;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.pl-conv-sub{display:block;font-size:9.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--label);margin-top:1px}
+.pl-base{font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--label)}
+
+/* ───── CHARTS ROW ───── */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:22px}
+@media(max-width:980px){.charts-row{grid-template-columns:1fr}}
+
+/* insights */
+#insights-body{max-height:248px;overflow-y:auto;display:flex;align-items:center;justify-content:center;margin-top:4px}
+.ins-row{display:flex;align-items:center;gap:13px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.ins-row:last-child{border-bottom:none}
+.ins-rank{font-size:13px;font-weight:700;color:var(--violet);min-width:24px;height:24px;border-radius:7px;background:rgba(47,143,239,.16);display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.ins-body{flex:1;min-width:0}
+.ins-reason{font-size:13px;font-weight:600;color:var(--ink)}
+.ins-bar{height:5px;background:rgba(255,255,255,.07);border-radius:3px;margin-top:6px;overflow:hidden}
+.ins-bar-fill{height:100%;background:var(--grad);border-radius:3px}
+.ins-meta{font-size:12px;color:var(--muted);white-space:nowrap;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.ins-meta b{color:var(--ink);font-size:13px}
+#insights-footer{font-size:11px;color:var(--label);margin-top:12px;display:none;border-top:1px solid var(--line-soft);padding-top:10px}
+
+/* region */
+.region-layout{display:flex;gap:20px;align-items:flex-start}
+.donut-wrap{flex-shrink:0;position:relative;width:190px}
+.donut-wrap canvas{width:190px!important;height:190px!important}
 .donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
-.donut-center .dc-val{font-size:22px;font-weight:700;color:#003399}
-.donut-center .dc-label{font-size:10px;color:#99aabb;text-transform:uppercase;letter-spacing:.4px}
+.donut-center .dc-val{font-size:30px;font-weight:700;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.donut-center .dc-label{font-size:9.5px;color:var(--label);text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-top:2px}
 .region-table-wrap{flex:1;min-width:0}
-.region-search{width:100%;padding:6px 10px;border:1px solid #d0ddf0;border-radius:7px;font-size:12px;outline:none;margin-bottom:8px;background:#f8faff;color:#333}
-.region-search:focus{border-color:#003399}
-.region-table{width:100%;border-collapse:collapse;font-size:12px}
-.region-table th{padding:6px 8px;text-align:left;font-size:10px;font-weight:700;color:#99aabb;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #eef2fa;cursor:pointer;user-select:none}
-.region-table th:hover{color:#003399}
-.region-table td{padding:6px 8px;border-bottom:1px solid #f4f7fd}
+.region-search,.search-box,.region-search:focus{font-family:inherit}
+.region-search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:12.5px;outline:none;margin-bottom:10px;background:rgba(255,255,255,.04);color:var(--ink)}
+.region-search:focus{border-color:var(--violet);background:rgba(255,255,255,.06);box-shadow:0 0 0 3px rgba(47,143,239,.22)}
+.region-scroll{max-height:200px;overflow-y:auto}
+.region-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.region-table th{padding:7px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--label);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;position:sticky;top:0;background:var(--surface-solid);z-index:1}
+.region-table th:hover{color:var(--violet)}
+.region-table td{padding:8px;border-bottom:1px solid var(--line-soft)}
 .region-table tr:last-child td{border-bottom:none}
-.region-table tr:hover td{background:#f4f7fd;cursor:pointer}
-.region-table tr.active-region td{background:#e8eef8}
-.r-bar{height:4px;background:#e0e8f4;border-radius:2px;margin-top:3px}
-.r-bar-fill{height:100%;border-radius:2px;background:#003399}
-.r-leads-bar{height:4px;background:#e0f0e0;border-radius:2px;margin-top:2px}
-.r-leads-fill{height:100%;border-radius:2px;background:#009900}
-.region-scroll{max-height:220px;overflow-y:auto}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.section-title{font-size:14px;font-weight:700;color:#1a2a3a}
-.section-count{font-size:12px;color:#7799bb;background:#e8eef8;padding:3px 10px;border-radius:20px;margin-left:8px}
-.search-box{background:#fff;border:1px solid #ccd8ee;border-radius:8px;padding:7px 12px;color:#333;font-size:13px;width:240px;outline:none}
-.search-box:focus{border-color:#003399}
-.status-btn{padding:7px 16px;border-radius:8px;border:1px solid #ccd8ee;background:#fff;color:#6688aa;font-size:13px;font-weight:600;cursor:pointer}
-.status-btn.active{background:#003399;color:#fff;border-color:#003399}
-.table-wrap{background:#fff;border:1px solid #d0ddf0;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,51,153,.06)}
+.region-table tr:hover td{background:rgba(255,255,255,.045);cursor:pointer}
+.region-table tr.active-region td{background:rgba(47,143,239,.14)}
+.r-bar{height:5px;background:rgba(255,255,255,.08);border-radius:3px;margin-top:4px;overflow:hidden}
+.r-bar-fill{height:100%;border-radius:3px;background:var(--c-leads)}
+.r-leads-bar{height:5px;background:rgba(52,211,154,.14);border-radius:3px;margin-top:3px;overflow:hidden}
+.r-leads-fill{height:100%;border-radius:3px;background:var(--c-int)}
+
+/* ───── SECTION HEADER ───── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;flex-wrap:wrap}
+.section-title{font-size:18px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.section-count{font-size:12px;font-weight:600;color:#a9d6ff;background:rgba(47,143,239,.14);border:1px solid rgba(47,143,239,.3);padding:4px 11px;border-radius:999px;margin-left:8px;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:9px;align-items:center}
+.search-box{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:11px;padding:9px 13px;color:var(--ink);font-size:13px;width:248px;outline:none;transition:.16s}
+.search-box:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(47,143,239,.22)}
+.seg{display:flex;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px;box-shadow:var(--sh-sm)}
+.status-btn{padding:7px 15px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.14s}
+.status-btn:hover{color:var(--ink)}
+.status-btn.active{background:var(--grad);color:#fff;box-shadow:0 8px 18px -8px rgba(47,143,239,.7)}
+.active-filter{background:rgba(47,143,239,.14);border:1px solid rgba(47,143,239,.3);border-radius:999px;padding:5px 8px 5px 13px;font-size:12px;font-weight:600;color:#a9d6ff;display:inline-flex;align-items:center;gap:8px}
+.active-filter button{background:rgba(47,143,239,.32);border:none;cursor:pointer;color:#fff;font-size:12px;line-height:1;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.active-filter button:hover{background:rgba(47,143,239,.55)}
+
+/* ───── MAIN TABLE ───── */
+.table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--sh-card);backdrop-filter:blur(6px)}
 table{width:100%;border-collapse:collapse;font-size:13px}
-thead{background:#f4f7fd}
-th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:#7799bb;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #d0ddf0;white-space:nowrap}
+thead{background:rgba(255,255,255,.035)}
+th{padding:13px 15px;text-align:left;font-size:10.5px;font-weight:700;color:var(--label);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);white-space:nowrap}
 th.num{text-align:right}
-td{padding:11px 14px;border-bottom:1px solid #eef2fa;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr.job-row:hover td{background:#f4f7fd;cursor:pointer}
-tr.job-row.expanded td{background:#eef2fa}
-.jq-name{font-weight:600;color:#1a2a3a;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.jq-id{font-size:11px;color:#aabbcc;font-family:monospace;margin-top:2px}
-.num-cell{text-align:right;font-weight:600}
-.num-cell.zero{color:#ccddee;font-weight:400}
-.c-leads{color:#0055cc}.c-int{color:#009900}.c-qual{color:#6633cc}.c-fail{color:#cc3333}.c-int2{color:#cc6600}.c-sel{color:#007788}
-.badge-open{background:#e6f9ee;color:#007700;border:1px solid #99ddaa;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-closed{background:#fdecea;color:#cc3333;border:1px solid #ffbbbb;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
-.mini-bar{height:3px;background:#e0e8f4;border-radius:2px;margin-top:5px}
-.mini-bar-fill{height:100%;background:#003399;border-radius:2px}
-.detail-row td{background:#f4f7fd;padding:0}
-.detail-inner{padding:18px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
-.di{background:#fff;border:1px solid #d0ddf0;border-radius:8px;padding:10px 14px}
-.di .dk{font-size:10px;color:#99aabb;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;font-weight:600}
-.di .dv{font-size:13px;color:#1a2a3a;font-weight:500}
-.desc-section{padding:0 20px 18px}
-.desc-box{background:#fff;border:1px solid #d0ddf0;border-radius:8px;padding:12px 16px;font-size:12px;line-height:1.7;color:#445566;max-height:100px;overflow-y:auto}
-.pipeline-row{display:flex;gap:6px;padding:0 20px 14px;flex-wrap:wrap}
-.ps{background:#eef2fa;border:1px solid #d0ddf0;border-radius:6px;padding:5px 12px;font-size:12px;color:#6688aa}
-.ps b{color:#1a2a3a}
-.active-filter{background:#e8eef8;border:1px solid #003399;border-radius:20px;padding:4px 12px;font-size:12px;color:#003399;display:inline-flex;align-items:center;gap:6px;margin-bottom:10px}
-.active-filter button{background:none;border:none;cursor:pointer;color:#003399;font-size:14px;line-height:1;padding:0}
-.pagination{display:flex;justify-content:center;gap:6px;margin-top:16px;align-items:center}
-.page-btn{padding:5px 12px;border-radius:6px;border:1px solid #ccd8ee;background:#fff;cursor:pointer;font-size:13px;color:#6688aa;font-weight:500}
-.page-btn.active{background:#003399;color:white;border-color:#003399;font-weight:700}
-.page-btn:disabled{opacity:.35;cursor:not-allowed}
-.empty{padding:56px;text-align:center;color:#99aabb}
-.loading{padding:56px;text-align:center;color:#99aabb;font-size:13px}
-.reason-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #eef2fa}
-.reason-item:last-child{border-bottom:none}
-.reason-rank{font-size:18px;font-weight:800;color:#003399;min-width:28px;line-height:1.2}
-.reason-text{flex:1;font-size:13px;color:#1a2a3a;line-height:1.5}
-.reason-count{font-size:12px;color:#99aabb;white-space:nowrap;margin-top:2px}
-.reason-bar{height:3px;background:#e0e8f4;border-radius:2px;margin-top:4px}
-.reason-bar-fill{height:100%;background:#003399;border-radius:2px}
-@media(max-width:800px){.charts-row{grid-template-columns:1fr}.region-layout{flex-direction:column}.donut-wrap{width:100%}}
-.month-filter{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
-.month-btn{padding:5px 14px;border-radius:20px;border:1px solid #ccd8ee;background:#fff;color:#6688aa;font-size:12px;font-weight:600;cursor:pointer}
-.month-btn.active{background:#003399;color:#fff;border-color:#003399}
+td{padding:13px 15px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tr.job-row{transition:background .12s}
+tr.job-row:hover td{background:rgba(255,255,255,.045);cursor:pointer}
+tr.job-row.expanded td{background:rgba(47,143,239,.12)}
+.jq-name{font-weight:600;color:var(--ink);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jq-id{font-size:11px;color:var(--label);margin-top:3px;font-family:"JetBrains Mono",monospace}
+.num-cell{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.num-cell.zero{color:#494463;font-weight:500}
+.c-leads{color:var(--c-leads)}.c-int{color:var(--c-int)}.c-qual{color:var(--c-qual)}
+.c-fail{color:var(--c-fail)}.c-int2{color:var(--c-int2)}.c-sel{color:var(--c-sel)}.c-orange{color:var(--c-pending)}
+.c-navy{color:var(--c-navy)}.c-blue{color:var(--c-leads)}.c-green{color:var(--c-int)}
+.c-purple{color:var(--c-qual)}.c-teal{color:var(--c-sel)}
+.badge-open{background:rgba(52,211,154,.13);color:#52e3ad;border:1px solid rgba(52,211,154,.32);padding:4px 11px;border-radius:999px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.badge-open::before{content:"";width:6px;height:6px;border-radius:50%;background:#34d39a;box-shadow:0 0 8px #34d39a}
+.badge-closed{background:rgba(251,113,133,.13);color:#fb8b9c;border:1px solid rgba(251,113,133,.32);padding:4px 11px;border-radius:999px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.badge-closed::before{content:"";width:6px;height:6px;border-radius:50%;background:#fb7185;box-shadow:0 0 8px #fb7185}
+.mini-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:6px;overflow:hidden;max-width:220px}
+.mini-bar-fill{height:100%;background:var(--grad);border-radius:2px}
+.col-sep{border-left:1px solid var(--line)!important}
+
+/* detail */
+.detail-row td{background:rgba(255,255,255,.025);padding:0}
+.detail-inner{padding:20px 22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:11px}
+.di{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.di .dk{font-size:9.5px;color:var(--label);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;font-weight:700}
+.di .dv{font-size:13px;color:var(--ink);font-weight:500}
+.desc-section{padding:0 22px 20px}
+.desc-box{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;padding:13px 16px;font-size:12.5px;line-height:1.7;color:var(--muted);max-height:120px;overflow-y:auto}
+.pipeline-row{display:flex;gap:7px;padding:0 22px 16px;flex-wrap:wrap}
+.ps{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted)}
+.ps b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* pagination */
+.pagination{display:flex;justify-content:center;gap:7px;margin-top:20px;align-items:center}
+.page-btn{padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.04);cursor:pointer;font-size:13px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;transition:.14s}
+.page-btn:hover:not(:disabled){border-color:rgba(255,255,255,.2);color:var(--ink)}
+.page-btn.active{background:var(--grad);color:#fff;border-color:transparent}
+.page-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.empty,.loading{padding:60px;text-align:center;color:var(--muted);font-size:13.5px}
+.loading::before{content:"";display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--violet);border-radius:50%;animation:spin .7s linear infinite;margin-right:10px;vertical-align:-3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* recruiter */
+.month-filter{display:flex;gap:8px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.month-btn{padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.14s}
+.month-btn:hover{border-color:rgba(255,255,255,.2);color:var(--ink)}
+.month-btn.active{background:var(--grad);color:#fff;border-color:transparent}
 .recruiter-table{width:100%;border-collapse:collapse;font-size:13px}
-.recruiter-table th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#7799bb;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #d0ddf0;white-space:nowrap;cursor:pointer}
-.recruiter-table th:hover{color:#003399}
+.recruiter-table th{padding:12px 15px;text-align:left;font-size:10.5px;font-weight:700;color:var(--label);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer}
+.recruiter-table th:hover{color:var(--violet)}
 .recruiter-table th.num{text-align:right}
-.recruiter-table td{padding:10px 14px;border-bottom:1px solid #eef2fa;vertical-align:middle}
-.recruiter-table tr:hover td{background:#f4f7fd}
-.recruiter-table tr.expanded-rec td{background:#eef2fa}
-.rec-email{font-weight:600;color:#1a2a3a}
-.rec-sub{font-size:11px;color:#99aabb;margin-top:2px}
-.jq-detail-row td{background:#f0f4fa;padding:0}
-.jq-detail-inner{padding:12px 20px}
-.jq-mini-table{width:100%;border-collapse:collapse;font-size:12px}
-.jq-mini-table th{padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:#99aabb;text-transform:uppercase;border-bottom:1px solid #d0ddf0}
+.recruiter-table td{padding:12px 15px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.recruiter-table tr:hover td{background:rgba(255,255,255,.045)}
+.recruiter-table tr.expanded-rec td{background:rgba(47,143,239,.12)}
+.rec-email{font-weight:600;color:var(--ink)}
+.rec-sub{font-size:11px;color:var(--label);margin-top:2px}
+.rec-avatar{width:30px;height:30px;border-radius:9px;background:var(--grad);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-right:11px;vertical-align:middle;flex-shrink:0;box-shadow:0 6px 16px -6px rgba(47,143,239,.7)}
+.rec-cell{display:flex;align-items:center}
+.jq-detail-row td{background:rgba(255,255,255,.022);padding:0}
+.jq-detail-inner{padding:14px 22px}
+.jq-mini-table{width:100%;border-collapse:collapse;font-size:12px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.jq-mini-table th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--label);text-transform:uppercase;border-bottom:1px solid var(--line)}
 .jq-mini-table th.num{text-align:right}
-.jq-mini-table td{padding:7px 10px;border-bottom:1px solid #eef2fa}
+.jq-mini-table td{padding:9px 12px;border-bottom:1px solid var(--line-soft)}
 .jq-mini-table tr:last-child td{border-bottom:none}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.26);background-clip:padding-box}
+/* premium display type */
+.stat-card .value,.section-title,.panel-title,.donut-center .dc-val,.pl-val,.pl-val-out,.pl-conv,.page-title{font-family:"Space Grotesk","Hanken Grotesk",sans-serif;letter-spacing:-.02em}
 </style>
 </head>
-<body><div id="auth-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#f0f4fa;display:flex;align-items:center;justify-content:center;z-index:9999">
-  <div style="background:white;border-radius:16px;padding:40px 48px;box-shadow:0 4px 24px rgba(0,51,153,.12);text-align:center;min-width:320px">
-    <div style="font-size:22px;font-weight:800;margin-bottom:4px"><span style="color:#003399">BLUE</span> <span style="color:#009900">DART</span></div>
-    <div style="font-size:13px;color:#99aabb;margin-bottom:28px">Job Query Dashboard</div>
-    <input type="password" id="pwd-input" placeholder="Enter password" style="width:100%;padding:10px 14px;border:1.5px solid #d0ddf0;border-radius:8px;font-size:15px;outline:none;margin-bottom:12px;text-align:center" onkeydown="if(event.key==='Enter')checkPwd()"/>
-    <div id="pwd-error" style="color:#cc3333;font-size:12px;margin-bottom:10px;display:none">Incorrect password. Try again.</div>
-    <button onclick="checkPwd()" style="width:100%;padding:10px;background:#003399;color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">Login</button>
+<body>
+<div id="auth-overlay" style="position:fixed;inset:0;background:radial-gradient(900px 560px at 50% -120px,rgba(47,143,239,.30),transparent 62%),#08070f;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border-radius:22px;padding:44px 48px;box-shadow:0 40px 90px -34px rgba(20,110,150,.55), inset 0 1px 0 rgba(255,255,255,.08);text-align:center;min-width:340px;border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(14px)">
+    <img src="data:image/png;base64,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" alt="Blue Dart" style="height:30px;background:#fff;padding:8px 11px;border-radius:10px;margin:0 auto 14px;display:block"/>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:30px;font-weight:500">✦ Job Query Dashboard</div>
+    <input type="password" id="pwd-input" placeholder="Enter password" style="width:100%;padding:12px 15px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);border-radius:11px;font-size:15px;font-family:inherit;color:var(--ink);outline:none;margin-bottom:12px;text-align:center" onkeydown="if(event.key==='Enter')checkPwd()"/>
+    <div id="pwd-error" style="color:var(--c-fail);font-size:12px;margin-bottom:12px;display:none">Incorrect password. Try again.</div>
+    <button onclick="checkPwd()" style="width:100%;padding:12px;background:var(--grad);color:#fff;border:none;border-radius:11px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 16px 30px -12px rgba(47,143,239,.8)">Sign in</button>
   </div>
 </div>
 <script>
@@ -155,46 +298,72 @@ if(sessionStorage.getItem("bd_auth")==="1"){
   document.getElementById("auth-overlay").style.display="none";
 }
 </script>
+
 <div class="topbar">
   <div class="topbar-left">
-    <div class="brand"><span class="blue">BLUE</span>&nbsp;<span class="green">DART</span></div>
-    <div class="divider">/</div>
+    <img src="data:image/png;base64,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" alt="Blue Dart" class="brand-logo"/>
+    <div class="brand-sep"></div>
     <div class="page-title">Job Query Dashboard</div>
+    <span class="demo-badge" id="demo-badge">Demo data — live API unreachable</span>
   </div>
-  <div class="topbar-center" id="topbar-info">Loading…</div>
+  <div class="topbar-center" id="topbar-info"><span class="dot"></span>Loading…</div>
   <div class="topbar-right">
-    <div class="auto-badge" onclick="toggleAutoRefresh()" id="auto-label">Auto — every hour</div>
+    <div class="auto-badge" onclick="toggleAutoRefresh()" id="auto-label">Auto · every hour</div>
     <button class="btn-refresh" onclick="refreshAll()">↻ Refresh</button>
   </div>
 </div>
 <div class="token-bar" id="token-bar" onclick="toggleToken()">
-  <span>▶ 🔑 Auth token (update when expired)</span>
+  <span>▶ 🔑 Auth token — update when expired</span>
   <input type="text" id="token-input" placeholder="Paste new access token and press Enter" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')updateToken()"/>
 </div>
+
 <div class="main">
+  <div class="section-label">Overview</div>
   <div class="stat-row">
-    <div class="stat-card"><div class="label">Active JQs</div><div class="value c-navy" id="s-active">—</div><div class="sub">job queries</div></div>
-    <div class="stat-card"><div class="label">Leads uploaded</div><div class="value c-blue" id="s-leads">—</div><div class="sub">total applicants</div></div>
-    <div class="stat-card"><div class="label">Interested</div><div class="value c-green" id="s-interested">—</div><div class="sub" id="s-interested-pct">—</div></div>
-    <div class="stat-card"><div class="label">Not Interested</div><div class="value c-fail" id="s-not-interested">—</div><div class="sub" id="s-not-interested-pct">—</div></div>
-    <div class="stat-card"><div class="label">Qual Pass</div><div class="value c-purple" id="s-qual-pass">—</div><div class="sub" id="s-qual-pass-pct">—</div></div>
-    <div class="stat-card"><div class="label">Qual Fail</div><div class="value c-fail" id="s-qual-fail">—</div><div class="sub" id="s-qual-fail-pct">—</div></div>
-    <div class="stat-card"><div class="label">Qual Pending</div><div class="value c-orange" id="s-qual-pending">—</div><div class="sub" id="s-qual-pending-pct">—</div></div>
-    <div class="stat-card"><div class="label">Interview</div><div class="value c-orange" id="s-interview">—</div><div class="sub" id="s-interview-pct">—</div></div>
-    <div class="stat-card"><div class="label">Selected</div><div class="value c-teal" id="s-selected">—</div><div class="sub" id="s-selected-pct">—</div></div>
+    <div class="stat-card" style="--accent:var(--c-navy)"><div class="label">Active JQs</div><div class="value" id="s-active">—</div><div class="sub">job queries</div></div>
+    <div class="stat-card" style="--accent:var(--c-leads)"><div class="label">Leads uploaded</div><div class="value" id="s-leads">—</div><div class="sub">total applicants</div></div>
+    <div class="stat-card" style="--accent:var(--c-int)"><div class="label">Interested</div><div class="value" id="s-interested">—</div><div class="sub" id="s-interested-pct">—</div></div>
+    <div class="stat-card" style="--accent:var(--c-fail)"><div class="label">Not interested</div><div class="value" id="s-not-interested">—</div><div class="sub" id="s-not-interested-pct">—</div></div>
+    <div class="stat-card" style="--accent:var(--c-qual)"><div class="label">Qual pass</div><div class="value" id="s-qual-pass">—</div><div class="sub" id="s-qual-pass-pct">—</div></div>
+    <div class="stat-card" style="--accent:var(--c-fail)"><div class="label">Qual fail</div><div class="value" id="s-qual-fail">—</div><div class="sub" id="s-qual-fail-pct">—</div></div>
+    <div class="stat-card" style="--accent:var(--c-pending)"><div class="label">Qual pending</div><div class="value" id="s-qual-pending">—</div><div class="sub" id="s-qual-pending-pct">—</div></div>
+    <div class="stat-card" style="--accent:var(--c-int2)"><div class="label">Interview</div><div class="value" id="s-interview">—</div><div class="sub" id="s-interview-pct">—</div></div>
+    <div class="stat-card" style="--accent:var(--c-sel)"><div class="label">Selected</div><div class="value" id="s-selected">—</div><div class="sub" id="s-selected-pct">—</div></div>
   </div>
-  <div class="charts-row">
-    <div class="chart-card" id="insights-card">
-      <h3>Top reasons — Not Interested</h3>
-      <div class="subtitle" id="insights-subtitle">Fetching call summaries across JQs...</div>
-      <div id="insights-body" style="max-height:220px;overflow-y:auto;display:flex;align-items:center;justify-content:center">
-        <div style="color:#99aabb;font-size:13px">⏳ Analyzing call summaries...</div>
+
+  <div class="panel pipeline-panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-eyebrow">Funnel</div>
+        <div class="panel-title">Conversion pipeline</div>
+        <div class="panel-sub">Lead-to-selection flow across all open job queries</div>
       </div>
-      <div id="insights-footer" style="font-size:11px;color:#aabbcc;margin-top:10px;display:none"></div>
     </div>
-    <div class="chart-card">
-      <h3>Jobs by region</h3>
-      <div class="subtitle">Click a region to filter the table below</div>
+    <div id="pipeline" class="pipeline"></div>
+  </div>
+
+  <div class="charts-row">
+    <div class="panel" id="insights-card">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Voice AI insights</div>
+          <div class="panel-title">Top reasons — Not interested</div>
+          <div class="panel-sub" id="insights-subtitle">Fetching call summaries across JQs…</div>
+        </div>
+      </div>
+      <div id="insights-body">
+        <div style="color:var(--muted);font-size:13px">Analyzing call summaries…</div>
+      </div>
+      <div id="insights-footer"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-eyebrow">Geography</div>
+          <div class="panel-title">Jobs by region</div>
+          <div class="panel-sub">Click a region to filter the table below</div>
+        </div>
+      </div>
       <div class="region-layout">
         <div class="donut-wrap">
           <canvas id="donut-chart"></canvas>
@@ -204,7 +373,7 @@ if(sessionStorage.getItem("bd_auth")==="1"){
           </div>
         </div>
         <div class="region-table-wrap">
-          <input class="region-search" id="region-search" placeholder="🔍 Search region..." oninput="filterRegions()"/>
+          <input class="region-search" id="region-search" placeholder="🔍  Search region…" oninput="filterRegions()"/>
           <div class="region-scroll">
             <table class="region-table">
               <thead><tr>
@@ -231,27 +400,122 @@ if(sessionStorage.getItem("bd_auth")==="1"){
         </span>
       </div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <input class="search-box" id="search" placeholder="🔍 Search job queries..." onkeydown="if(event.key==='Enter')doSearch()" oninput="if(this.value==='')doSearch()"/>
-      <button class="status-btn active" id="btn-open" onclick="setStatus('OPEN')">Open</button>
-      <button class="status-btn" id="btn-closed" onclick="setStatus('CLOSED')">Closed</button>
-      <button class="status-btn" id="btn-recruiter" onclick="setView('recruiter')">👤 Recruiters</button>
+    <div class="toolbar">
+      <input class="search-box" id="search" placeholder="🔍  Search job queries…" onkeydown="if(event.key==='Enter')doSearch()" oninput="if(this.value==='')doSearch()"/>
+      <div class="seg">
+        <button class="status-btn active" id="btn-open" onclick="setStatus('OPEN')">Open</button>
+        <button class="status-btn" id="btn-closed" onclick="setStatus('CLOSED')">Closed</button>
+        <button class="status-btn" id="btn-recruiter" onclick="setView('recruiter')">Recruiters</button>
+      </div>
     </div>
   </div>
   <div class="table-wrap" id="main-table-wrap"><div id="table-area"><div class="loading">Loading job queries…</div></div></div>
   <div class="pagination" id="pagination"></div>
-  <div id="recruiter-area" style="display:none;margin-top:0"><div class="empty">Loading data... please wait.</div></div>
+  <div id="recruiter-area" style="display:none;margin-top:0"><div class="empty">Loading data… please wait.</div></div>
 </div>
 
 <script>
 let page=1,search="",status="OPEN",selected=-1,allData=[],allJQsCache=[],autoTimer=null,autoEnabled=true;
 let donutChart=null;
 let regionData=[],regionSort={key:"jobs",dir:-1},activeRegion=null;
-const COLORS=["#003399","#0055cc","#0077ff","#009900","#00bb00","#6633cc","#9933cc","#cc6600","#007788","#cc3333","#0099cc","#336600","#993300","#006633","#330099"];
+let PIPE={leads:0,interested:0,qualPass:0,interview:0,selected:0};
+const COLORS=["#2f8fef","#1fc77d","#22d3ee","#38bdf8","#34d39a","#5eead4","#0ea5e9","#10b981","#60a5fa","#2dd4bf","#3bb0ff","#14b8a6","#7dd3fc","#4ade80","#67e8f9"];
+
+/* ───── DEMO FALLBACK ─────────────────────────────────────
+   The dashboard fetches from the Blue Dart proxy. When that
+   endpoint is unreachable (e.g. opened outside the proxy, or
+   an expired token) we serve realistic sample data so the
+   dashboard always renders, and surface a clear "Demo data"
+   badge. Live behaviour against the real API is unchanged. */
+let DEMO=false, MOCK_JQS=null;
+function markDemo(){ if(!DEMO){ DEMO=true; const b=document.getElementById("demo-badge"); if(b)b.style.display="inline-flex"; } }
+function rnd(a,b){return Math.floor(a+Math.random()*(b-a+1));}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function genMockJQs(){
+  if(MOCK_JQS) return MOCK_JQS;
+  const cities=[["Mumbai","Maharashtra"],["Andheri","Maharashtra"],["Viman Nagar","Maharashtra"],["Pune","Maharashtra"],["Vadodara","Gujarat"],["Ahmedabad","Gujarat"],["Surat","Gujarat"],["Guwahati","Assam"],["Dibrugarh","Assam"],["Guindy","Tamil Nadu"],["Chennai","Tamil Nadu"],["Coimbatore","Tamil Nadu"],["Bengaluru","Karnataka"],["Hubli","Karnataka"],["Hyderabad","Telangana"],["Vijayawada","Andhra Pradesh"],["Kochi","Kerala"],["Thrissur","Kerala"],["Delhi","Delhi"],["Gurugram","Haryana"],["Noida","Uttar Pradesh"],["Lucknow","Uttar Pradesh"],["Kanpur","Uttar Pradesh"],["Jaipur","Rajasthan"],["Jodhpur","Rajasthan"],["Kolkata","West Bengal"],["Howrah","West Bengal"],["Siliguri","West Bengal"],["Patna","Bihar"],["Ranchi","Jharkhand"],["Bhubaneswar","Odisha"],["Cuttack","Odisha"],["Indore","Madhya Pradesh"],["Bhopal","Madhya Pradesh"],["Nagpur","Maharashtra"],["Nashik","Maharashtra"],["Raipur","Chhattisgarh"],["Dehradun","Uttarakhand"],["Chandigarh","Punjab"],["Ludhiana","Punjab"]];
+  const roles=["Delivery Executive","Pickup & Delivery Associate","Field Operations Executive","Warehouse Associate","Branch Operations Executive","Customer Service Associate","Courier Associate","Loader / Sorter","Data Entry Operator","Field Sales Officer"];
+  const recruiters=["ravi.sharma@bluedart.com","priya.nair@bluedart.com","arjun.mehta@bluedart.com","sneha.iyer@hunar.ai","vikram.rao@bluedart.com","anita.desai@bluedart.com","rohan.gupta@hunar.ai","kavya.menon@bluedart.com"];
+  const N=309, out=[]; const now=Date.now();
+  for(let i=0;i<N;i++){
+    const city=pick(cities), role=pick(roles);
+    const leads=rnd(40,1500);
+    const notInt=Math.round(leads*(0.05+Math.random()*0.10));
+    const interested=Math.round(leads*(0.08+Math.random()*0.14));
+    const evaluating=Math.round(interested*(0.15+Math.random()*0.45));
+    const qualified=Math.round(interested*(0.10+Math.random()*0.30));
+    const interview=Math.round(qualified*(0.25+Math.random()*0.55));
+    const selected=Math.round(interview*(Math.random()*0.4));
+    const rejected=Math.round(interview*(Math.random()*0.3));
+    const status=Math.random()<0.82?"OPEN":"CLOSED";
+    const daysAgo=rnd(0,170);
+    out.push({
+      title:role+" — "+city[0],
+      job_query_id:"JQ"+(100000+i),
+      shortcode:"bd"+(1000+i),
+      job_query_status:status,
+      worker_status_count:[
+        {status:"SHORTLISTED",count:leads},
+        {status:"INTERESTED",count:interested+notInt},
+        {status:"NOT_INTERESTED",count:notInt},
+        {status:"QUALIFIED",count:qualified},
+        {status:"EVALUATING",count:evaluating},
+        {status:"INTERVIEW_SHORTLISTED",count:interview},
+        {status:"COMPANY_APPROVED",count:selected},
+        {status:"REJECTED",count:rejected}
+      ],
+      job_locality:city[0],
+      custom_job_district:city[0],
+      job_district:city[0],
+      job_state:city[1],
+      custom_job_role:role, job_role:role,
+      number_of_openings:rnd(2,40),
+      min_experience:pick(["Fresher","0-1 yrs","1-2 yrs","2-4 yrs"]),
+      min_salary:rnd(12,22)*1000, max_salary:rnd(24,40)*1000,
+      description:"We are hiring a "+role+" for our "+city[0]+" hub. Responsibilities include timely pickup and delivery of shipments, route adherence, handheld scanning, and maintaining service quality standards across the assigned beat.",
+      audit_metadata:{added_by:pick(recruiters),updated_on:new Date(now-daysAgo*86400000).toISOString()}
+    });
+  }
+  MOCK_JQS=out; return out;
+}
+function mockSearch(pg,srch,st,ipp){
+  let items=genMockJQs().filter(j=>j.job_query_status===st);
+  if(srch){const q=srch.toLowerCase();items=items.filter(j=>j.title.toLowerCase().includes(q)||(j.job_locality||"").toLowerCase().includes(q));}
+  const total=items.length, number_of_pages=Math.ceil(total/ipp);
+  const slice=items.slice((pg-1)*ipp,(pg-1)*ipp+ipp);
+  return {data:slice,pagination_info:{total,number_of_pages},total_count:total};
+}
+const NI_SUMMARIES=[
+  "Candidate said the salary offered was lower than their current pay and was not satisfied with the compensation.",
+  "The applicant mentioned the job location is too far from their home and commute would be difficult.",
+  "Candidate is already working in another job and not looking to switch right now.",
+  "Not interested in delivery / field work, prefers an office based role.",
+  "Call was not picked up after multiple attempts, number was unreachable.",
+  "Candidate cited personal and family reasons for not being able to join currently.",
+  "Already received another offer and has decided to join elsewhere.",
+  "Salary expectation much higher than the offered range, declined the opportunity.",
+  "Wants a desk job near home, not comfortable with riding a two-wheeler for delivery.",
+  "Said they are not interested in this job role at the moment.",
+  "Location of the branch is far, relocation is not possible for the candidate.",
+  "Currently employed and the current job pays better, so declined."
+];
+function mockShortlisted(){
+  const n=rnd(3,9), workers=[];
+  for(let i=0;i<n;i++) workers.push({voice_call_flow:{status_updates:[{status:"NOT_INTERESTED",summary:{text:pick(NI_SUMMARIES)}}]}});
+  return {data:workers};
+}
 
 async function api(pg,srch,st,ipp=10){
-  const r=await fetch("/v1/company/bluedart/search-job-query",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_query_status:st,page:pg,search_key:srch,items_per_page:ipp,sort:{key:"audit_metadata.updated_on",order:"desc"},filters:{}})});
-  return r.json();
+  try{
+    const r=await fetch("/v1/company/bluedart/search-job-query",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_query_status:st,page:pg,search_key:srch,items_per_page:ipp,sort:{key:"audit_metadata.updated_on",order:"desc"},filters:{}})});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    if(!j||!j.data) throw new Error("no data");
+    return j;
+  }catch(e){
+    markDemo();
+    return mockSearch(pg,srch,st,ipp);
+  }
 }
 function getSC(j,s){return(j.worker_status_count||[]).find(x=>x.status===s)?.count??0;}
 function sumSC(data,s){return data.reduce((a,j)=>a+getSC(j,s),0);}
@@ -270,7 +534,6 @@ async function loadAll(){
     allJQsCache=all;
     computeStats(all,total);
     if(!insightsFetched)loadNotInterestedInsights(all);
-    // renderFunnel removed
     buildRegionData(all);
     renderRegionChart();
     renderRegionTable();
@@ -295,10 +558,35 @@ function computeStats(data,total){
   document.getElementById("s-interview-pct").textContent=leads?Math.round(interview/leads*100)+"% of leads":"—";
   document.getElementById("s-selected").textContent=selected.toLocaleString();
   document.getElementById("s-selected-pct").textContent=leads?Math.round(selected/leads*100)+"% of leads":"—";
+  PIPE={leads,interested,qualPass,interview,selected};
+  renderPipeline();
   const now=new Date();
-  document.getElementById("topbar-info").innerHTML="Updated "+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" · <b>"+total+" active JQs</b>";
+  document.getElementById("topbar-info").innerHTML='<span class="dot"></span>Updated '+now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")+":"+now.getSeconds().toString().padStart(2,"0")+" · <b>"+total+" active JQs</b>";
 }
 
+function renderPipeline(){
+  const s=PIPE;
+  const stages=[
+    {k:"Leads",v:s.leads,c:"var(--c-leads)"},
+    {k:"Interested",v:s.interested,c:"var(--c-int)"},
+    {k:"Qualified",v:s.qualPass,c:"var(--c-qual)"},
+    {k:"Interview",v:s.interview,c:"var(--c-int2)"},
+    {k:"Selected",v:s.selected,c:"var(--c-sel)"}
+  ];
+  const max=Math.max(...stages.map(x=>x.v),1);
+  let html="";
+  stages.forEach((st,i)=>{
+    const w=Math.max(2,Math.round(st.v/max*100));
+    const inside=w>=18;
+    const conv=i===0?null:(stages[i-1].v?Math.round(st.v/stages[i-1].v*100):0);
+    html+='<div class="pl-row">'
+      +'<div class="pl-label">'+st.k+'</div>'
+      +'<div class="pl-track"><div class="pl-fill" style="width:'+w+'%;background:'+st.c+'">'+(inside?'<span class="pl-val">'+st.v.toLocaleString()+'</span>':'')+'</div>'+(inside?'':'<span class="pl-val-out" style="color:'+st.c+'">'+st.v.toLocaleString()+'</span>')+'</div>'
+      +'<div class="pl-conv">'+(conv===null?'<span class="pl-base">starting point</span>':'<span style="color:'+st.c+'">'+conv+'%</span><span class="pl-conv-sub">vs previous</span>')+'</div>'
+      +'</div>';
+  });
+  document.getElementById("pipeline").innerHTML=html;
+}
 
 function buildRegionData(data){
   const map={};
@@ -323,8 +611,8 @@ function renderRegionChart(){
   if(donutChart)donutChart.destroy();
   donutChart=new Chart(document.getElementById("donut-chart"),{
     type:"doughnut",
-    data:{labels,datasets:[{data:values,backgroundColor:COLORS.slice(0,labels.length),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},
-    options:{responsive:false,cutout:"68%",plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+ctx.raw+" JQs"}}},onClick:(e,els)=>{
+    data:{labels,datasets:[{data:values,backgroundColor:COLORS.slice(0,labels.length),borderWidth:3,borderColor:"#13101f",hoverOffset:7}]},
+    options:{responsive:false,cutout:"70%",plugins:{legend:{display:false},tooltip:{padding:10,backgroundColor:"#0b1f24",titleFont:{family:"Hanken Grotesk"},bodyFont:{family:"Hanken Grotesk"},callbacks:{label:ctx=>" "+ctx.label+": "+ctx.raw+" JQs"}}},onClick:(e,els)=>{
       if(!els.length)return;
       const label=labels[els[0].index];
       if(label==="Others")return;
@@ -346,13 +634,13 @@ function renderRegionTable(){
   let html="";
   rows.forEach(r=>{
     const isActive=activeRegion===r.name;
-    html+=`<tr class="${isActive?"active-region":""}" onclick="filterByRegion('${r.name.replace(/'/g,"\'")}')">
-      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${isActive?600:400};color:${isActive?"#003399":"#1a2a3a"}">${r.name}</td>
-      <td style="text-align:right;font-weight:600;color:#003399">${r.jobs}<div class="r-bar"><div class="r-bar-fill" style="width:${Math.round(r.jobs/maxJobs*100)}%"></div></div></td>
-      <td style="text-align:right;font-weight:600;color:#009900">${r.leads.toLocaleString()}<div class="r-leads-bar"><div class="r-leads-fill" style="width:${Math.round(r.leads/maxLeads*100)}%"></div></div></td>
-    </tr>`;
+    html+='<tr class="'+(isActive?"active-region":"")+'" onclick="filterByRegion(\''+r.name.replace(/'/g,"\\'")+'\')">'
+      +'<td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:'+(isActive?600:500)+';color:'+(isActive?"var(--navy)":"var(--ink)")+'">'+r.name+'</td>'
+      +'<td style="text-align:right;font-weight:600;color:var(--c-leads)">'+r.jobs+'<div class="r-bar"><div class="r-bar-fill" style="width:'+Math.round(r.jobs/maxJobs*100)+'%"></div></div></td>'
+      +'<td style="text-align:right;font-weight:600;color:var(--c-int)">'+r.leads.toLocaleString()+'<div class="r-leads-bar"><div class="r-leads-fill" style="width:'+Math.round(r.leads/maxLeads*100)+'%"></div></div></td>'
+      +'</tr>';
   });
-  document.getElementById("region-tbody").innerHTML=html||'<tr><td colspan="3" style="text-align:center;color:#99aabb;padding:16px">No regions found</td></tr>';
+  document.getElementById("region-tbody").innerHTML=html||'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:18px">No regions found</td></tr>';
 }
 
 function filterRegions(){renderRegionTable();}
@@ -381,7 +669,6 @@ function clearRegionFilter(){
 async function loadFiltered(){
   document.getElementById("table-area").innerHTML='<div class="loading">Filtering by region…</div>';
   try{
-    // fetch more to filter client-side
     const d=await api(1,"","OPEN",50);
     let items=d.data||[];
     const total2=d.pagination_info?.total??50;
@@ -417,7 +704,7 @@ async function load(){
 function renderTable(items){
   if(!items.length){document.getElementById("table-area").innerHTML='<div class="empty">No job queries found.</div>';return;}
   const maxLeads=Math.max(...items.map(j=>getSC(j,"SHORTLISTED")),1);
-  let html='<table><thead><tr><th>Job Query</th><th>Location</th><th class="num c-leads">Leads</th><th class="num c-int">Interested</th><th class="num c-fail">Not interested</th><th class="num c-qual">Qualify pass</th><th class="num c-fail">Qualify fail</th><th class="num c-int2">Interview</th><th class="num c-orange">Qual Pending</th><th class="num c-sel">Selected</th><th class="num c-fail">Rejected</th><th style="border-left:2px solid #d0ddf0">Status</th></tr></thead><tbody>';
+  let html='<table><thead><tr><th>Job Query</th><th>Location</th><th class="num c-leads">Leads</th><th class="num c-int">Interested</th><th class="num c-fail">Not interested</th><th class="num c-qual">Qualify pass</th><th class="num c-fail">Qualify fail</th><th class="num c-int2">Interview</th><th class="num c-orange">Qual Pending</th><th class="num c-sel">Selected</th><th class="num c-fail">Rejected</th><th class="col-sep">Status</th></tr></thead><tbody>';
   items.forEach((j,i)=>{
     const name=j.title||j.name||"Untitled",id=j.job_query_id||j.id||"";
     const loc=[j.job_locality,j.custom_job_district].filter(Boolean).join(", ")||[j.job_district,j.job_state].filter(Boolean).join(", ")||"—";
@@ -426,16 +713,16 @@ function renderTable(items){
     const nc=(v,cls)=>v>0?'<td class="num-cell '+cls+'">'+v.toLocaleString()+'</td>':'<td class="num-cell zero">0</td>';
     html+='<tr class="job-row'+(isExp?" expanded":"")+'" onclick="toggle('+i+')">'
       +'<td><div class="jq-name">'+name+'</div><div class="jq-id">'+id+'</div><div class="mini-bar"><div class="mini-bar-fill" style="width:'+pct+'%"></div></div></td>'
-      +'<td style="color:#6688aa;font-size:12px">'+loc+'</td>'
+      +'<td style="color:var(--muted);font-size:12.5px">'+loc+'</td>'
       +nc(leads,"c-leads")+nc(interested,"c-int")+nc(notInt,"c-fail")
       +(qualPass>0?'<td class="num-cell c-qual" id="qp_'+id+'">'+qualPass.toLocaleString()+'</td>':'<td class="num-cell zero" id="qp_'+id+'">0</td>')
-      +(j._qualifyLoaded?(qualFail>0?'<td class="num-cell c-fail" id="qf_'+id+'" style="text-align:right">'+qualFail.toLocaleString()+'</td>':'<td class="num-cell zero" id="qf_'+id+'" style="text-align:right">0</td>'):'<td class="num-cell zero" id="qf_'+id+'" style="text-align:right;color:#ccddee">…</td>')
+      +(j._qualifyLoaded?(qualFail>0?'<td class="num-cell c-fail" id="qf_'+id+'" style="text-align:right">'+qualFail.toLocaleString()+'</td>':'<td class="num-cell zero" id="qf_'+id+'" style="text-align:right">0</td>'):'<td class="num-cell zero" id="qf_'+id+'" style="text-align:right;color:#494463">…</td>')
       +nc(interview,"c-int2")+(qualPending>0?'<td class="num-cell c-orange" id="qpend_'+id+'" style="text-align:right">'+qualPending.toLocaleString()+'</td>':'<td class="num-cell zero" id="qpend_'+id+'" style="text-align:right">0</td>')+nc(sel,"c-sel")+nc(rejected,"c-fail")
-      +'<td style="border-left:2px solid #d0ddf0"><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
+      +'<td class="col-sep"><span class="'+(st==="OPEN"?"badge-open":"badge-closed")+'">'+st+'</span></td></tr>';
     if(isExp){
       const sc=j.worker_status_count||[];
       html+='<tr class="detail-row"><td colspan="12"><div class="detail-inner">'
-        +'<div class="di"><div class="dk">Job ID</div><div class="dv" style="font-size:11px;font-family:monospace">'+id+'</div></div>'
+        +'<div class="di"><div class="dk">Job ID</div><div class="dv mono" style="font-size:11px">'+id+'</div></div>'
         +'<div class="di"><div class="dk">Role</div><div class="dv">'+(j.custom_job_role||j.job_role||"—")+'</div></div>'
         +'<div class="di"><div class="dk">Openings</div><div class="dv">'+(j.number_of_openings??j.openings??"—")+'</div></div>'
         +'<div class="di"><div class="dk">Experience</div><div class="dv">'+(j.min_experience||"—")+'</div></div>'
@@ -445,9 +732,9 @@ function renderTable(items){
         +'<div class="di"><div class="dk">State</div><div class="dv">'+(j.job_state||"—")+'</div></div>'
         +'<div class="di"><div class="dk">Created by</div><div class="dv" style="font-size:11px">'+(j.audit_metadata?.added_by||"—")+'</div></div>'
         +'<div class="di"><div class="dk">Updated</div><div class="dv" style="font-size:11px">'+(j.audit_metadata?.updated_on?new Date(j.audit_metadata.updated_on).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—")+'</div></div>'
-        +'<div class="di"><div class="dk">App link</div><div class="dv"><a href="https://bluedart.hunar.ai/job/'+(j.job_query_id||j.shortcode||"")+'" target="_blank" style="color:#003399;font-weight:600">Open ↗</a></div></div>'
+        +'<div class="di"><div class="dk">App link</div><div class="dv"><a href="https://bluedart.hunar.ai/job/'+(j.job_query_id||j.shortcode||"")+'" target="_blank" style="color:var(--navy);font-weight:600">Open ↗</a></div></div>'
         +'</div><div class="pipeline-row">'+sc.map(x=>'<div class="ps">'+x.status+': <b>'+x.count+'</b></div>').join("")+'</div>'
-        +(j.description?'<div class="desc-section"><div style="font-size:10px;color:#99aabb;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;font-weight:600">Description</div><div class="desc-box">'+j.description+'</div></div>':"")
+        +(j.description?'<div class="desc-section"><div style="font-size:10px;color:var(--label);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;font-weight:700">Description</div><div class="desc-box">'+j.description+'</div></div>':"")
         +'</td></tr>';
     }
   });
@@ -455,17 +742,35 @@ function renderTable(items){
   document.getElementById("table-area").innerHTML=html;
 }
 
-
 async function fetchQualifyWorkers(jqId){
   let all=[],pg=1,total=null;
   do{
-    const data=await fetch("/v1/company/bluedart/qualified-workers/"+jqId,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:pg,items_per_page:100,search_key:"",filters:{}})}).then(r=>r.json());
+    let data;
+    try{
+      const r=await fetch("/v1/company/bluedart/qualified-workers/"+jqId,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({page:pg,items_per_page:100,search_key:"",filters:{}})});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      data=await r.json();
+    }catch(e){
+      markDemo();
+      return mockQualify(jqId);
+    }
     const workers=data.data||data.workers||data.results||[];
     if(total===null)total=data.pagination_info?.total_count||data.total||workers.length;
     all=[...all,...workers];pg++;
     if(all.length>=total||workers.length===0)break;
   }while(true);
   return all;
+}
+function mockQualify(jqId){
+  const jq=(MOCK_JQS||[]).find(j=>j.job_query_id===jqId);
+  const evalCount=jq?getSC(jq,"EVALUATING"):rnd(5,40);
+  const qpass=jq?getSC(jq,"QUALIFIED"):rnd(2,20);
+  const workers=[];
+  const fail=Math.round(qpass*(0.6+Math.random()*1.2));
+  for(let i=0;i<qpass;i++)workers.push({screening_status:"PASS"});
+  for(let i=0;i<fail;i++)workers.push({screening_status:"FAIL"});
+  for(let i=0;i<evalCount;i++)workers.push({screening_status:"PENDING"});
+  return workers;
 }
 
 async function loadAllQualify(){
@@ -497,9 +802,9 @@ async function loadQualify(jq){
     const passEl=document.getElementById("qp_"+jqId);
     const failEl=document.getElementById("qf_"+jqId);
     const pendEl=document.getElementById("qpend_"+jqId);
-    if(passEl){passEl.textContent=pass;passEl.className="num-cell"+(pass>0?" c-qual":" zero");passEl.style.color=pass>0?"#6633cc":"#ccddee";passEl.style.textAlign="right";}
-    if(failEl){failEl.textContent=fail;failEl.className="num-cell"+(fail>0?" c-fail":" zero");failEl.style.color=fail>0?"#cc3333":"#ccddee";failEl.style.textAlign="right";}
-    if(pendEl){pendEl.textContent=pending;pendEl.className="num-cell"+(pending>0?" c-orange":" zero");pendEl.style.color=pending>0?"#cc6600":"#ccddee";pendEl.style.textAlign="right";}
+    if(passEl){passEl.textContent=pass;passEl.className="num-cell"+(pass>0?" c-qual":" zero");passEl.style.textAlign="right";}
+    if(failEl){failEl.textContent=fail;failEl.className="num-cell"+(fail>0?" c-fail":" zero");failEl.style.textAlign="right";}
+    if(pendEl){pendEl.textContent=pending;pendEl.className="num-cell"+(pending>0?" c-orange":" zero");pendEl.style.textAlign="right";}
     updateQualifyCards();
   }catch(e){console.error("Qualify load error:",e);}
 }
@@ -517,8 +822,8 @@ function updateQualifyCards(){
   document.getElementById("s-qual-fail-pct").textContent=leads?Math.round(totalFail/leads*100)+"% of leads":"—";
   document.getElementById("s-qual-pending").textContent=totalPending.toLocaleString();
   document.getElementById("s-qual-pending-pct").textContent=leads?Math.round(totalPending/leads*100)+"% of leads":"—";
+  PIPE.qualPass=totalPass;renderPipeline();
 }
-
 
 let currentView="jq",recruiterSort={col:"jqs",dir:-1},selectedRec=-1,activeMonth="all";
 
@@ -544,7 +849,7 @@ function getMonth(jq){
 
 function renderRecruiterView(){
   var src=allJQsCache.length?allJQsCache:allData;
-  if(!src.length){document.getElementById("recruiter-area").innerHTML='<div class="empty">Loading data... please wait.</div>';return;}
+  if(!src.length){document.getElementById("recruiter-area").innerHTML='<div class="empty">Loading data… please wait.</div>';return;}
   var months=[...new Set(src.map(function(j){return getMonth(j);}))]
     .filter(function(m){return m!=="Unknown";}).sort().reverse();
   var filtered=activeMonth==="all"?src:src.filter(function(j){return getMonth(j)===activeMonth;});
@@ -571,7 +876,7 @@ function renderRecruiterView(){
     return recruiterSort.dir===-1?bv-av:av-bv;
   });
 
-  var html='<div class="month-filter"><span style="font-size:12px;color:#7799bb;font-weight:600">Month:</span>';
+  var html='<div class="month-filter"><span style="font-size:12px;color:var(--muted);font-weight:600">Month:</span>';
   var allActive=activeMonth==="all"?' active':'';
   html+='<button class="month-btn'+allActive+'" onclick="setMonth(this.dataset.m)" data-m="all">All time</button>';
   months.forEach(function(m){
@@ -585,11 +890,11 @@ function renderRecruiterView(){
   var totJQs=recs.reduce(function(s,r){return s+r.jqs.length;},0);
   var totLeads=recs.reduce(function(s,r){return s+r.leads;},0);
   var totInt=recs.reduce(function(s,r){return s+r.interested;},0);
-  html+='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">';
-  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Recruiters</div><div class="value c-navy">'+recs.length+'</div></div>';
-  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Total JQs</div><div class="value c-blue">'+totJQs+'</div></div>';
-  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Total Leads</div><div class="value c-green">'+totLeads.toLocaleString()+'</div></div>';
-  html+='<div class="stat-card" style="flex:0 0 auto;min-width:120px"><div class="label">Interested</div><div class="value c-purple">'+totInt.toLocaleString()+'</div></div>';
+  html+='<div class="stat-row" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px">';
+  html+='<div class="stat-card" style="--accent:var(--c-navy)"><div class="label">Recruiters</div><div class="value">'+recs.length+'</div></div>';
+  html+='<div class="stat-card" style="--accent:var(--c-leads)"><div class="label">Total JQs</div><div class="value">'+totJQs+'</div></div>';
+  html+='<div class="stat-card" style="--accent:var(--c-int)"><div class="label">Total Leads</div><div class="value">'+totLeads.toLocaleString()+'</div></div>';
+  html+='<div class="stat-card" style="--accent:var(--c-qual)"><div class="label">Interested</div><div class="value">'+totInt.toLocaleString()+'</div></div>';
   html+='</div>';
 
   html+='<div class="table-wrap"><table class="recruiter-table"><thead><tr>';
@@ -608,8 +913,9 @@ function renderRecruiterView(){
 
   recs.forEach(function(r,i){
     var isExp=selectedRec===i;
+    var initials=r.email.replace(/@.*/,"").split(/[._]/).map(function(s){return s[0]||"";}).join("").slice(0,2).toUpperCase();
     html+='<tr class="'+(isExp?"expanded-rec":"")+'" onclick="toggleRec('+i+')" style="cursor:pointer">';
-    html+='<td><div class="rec-email">'+r.email+'</div><div class="rec-sub">'+r.jqs.length+' JQ'+(r.jqs.length===1?"":"s")+'</div></td>';
+    html+='<td><div class="rec-cell"><span class="rec-avatar">'+initials+'</span><div><div class="rec-email">'+r.email+'</div><div class="rec-sub">'+r.jqs.length+' JQ'+(r.jqs.length===1?"":"s")+'</div></div></div></td>';
     html+=nC(r.jqs.length,"c-navy")+nC(r.leads,"c-leads")+nC(r.interested,"c-int")+nC(r.notInt,"c-fail")+nC(r.qualPass,"c-qual")+nC(r.qualFail,"c-fail")+nC(r.qualPending,"c-orange")+nC(r.interview,"c-int2")+nC(r.selected,"c-sel")+nC(r.rejected,"c-fail");
     html+='</tr>';
     if(isExp){
@@ -620,7 +926,7 @@ function renderRecruiterView(){
         var d=j.audit_metadata&&j.audit_metadata.updated_on?new Date(j.audit_metadata.updated_on).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—";
         var qp=j._qpass!=null?j._qpass:getSC(j,"QUALIFIED");
         html+='<tr><td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">'+(j.title||j.name||"Untitled")+'</td>';
-        html+='<td style="color:#99aabb;font-size:11px">'+d+'</td>';
+        html+='<td style="color:var(--label);font-size:11px">'+d+'</td>';
         html+=nC(getSC(j,"SHORTLISTED"),"c-leads")+nC(getSC(j,"INTERESTED"),"c-int")+nC(getSC(j,"NOT_INTERESTED"),"c-fail");
         html+='<td class="num-cell'+(qp>0?" c-qual":" zero")+'" style="text-align:right">'+qp+'</td>';
         html+=nC(getSC(j,"INTERVIEW_SHORTLISTED"),"c-int2");
@@ -638,8 +944,6 @@ function setMonth(m){activeMonth=m;selectedRec=-1;renderRecruiterView();}
 function toggleRec(i){selectedRec=selectedRec===i?-1:i;renderRecruiterView();}
 function sortRec(col){if(recruiterSort.col===col)recruiterSort.dir*=-1;else{recruiterSort.col=col;recruiterSort.dir=-1;}renderRecruiterView();}
 
-
-
 // ── NOT INTERESTED INSIGHTS ──────────────────────────────
 let insightsFetched = false;
 
@@ -647,19 +951,16 @@ async function loadNotInterestedInsights(allJQs) {
   if(insightsFetched) return;
   insightsFetched = true;
 
-  // Get top 15 JQs by NOT_INTERESTED count
   const topJQs = allJQs
     .filter(j => getSC(j, "NOT_INTERESTED") > 0)
     .sort((a,b) => getSC(b,"NOT_INTERESTED") - getSC(a,"NOT_INTERESTED"))
     .slice(0, 15);
 
   document.getElementById("insights-subtitle").textContent =
-    "Fetching call summaries from top " + topJQs.length + " JQs...";
+    "Fetching call summaries from top " + topJQs.length + " JQs…";
 
   const summaries = [];
   let fetched = 0;
-
-  // Fetch 3 at a time concurrently
   const CONC = 3;
   let idx = 0;
   async function fetchNext() {
@@ -667,11 +968,16 @@ async function loadNotInterestedInsights(allJQs) {
     const jq = topJQs[idx++];
     const jqId = jq.job_query_id || jq.id;
     try {
-      const data = await fetch("/v1/company/bluedart/job-query/" + jqId + "/shortlisted-workers", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({page:1, items_per_page:100, search_key:"", filters:{status:["NOT_INTERESTED"]}})
-      }).then(r => r.json());
+      let data;
+      try{
+        const r = await fetch("/v1/company/bluedart/job-query/" + jqId + "/shortlisted-workers", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({page:1, items_per_page:100, search_key:"", filters:{status:["NOT_INTERESTED"]}})
+        });
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        data = await r.json();
+      }catch(err){ markDemo(); data = mockShortlisted(); }
 
       const workers = data.data || [];
       workers.forEach(w => {
@@ -686,7 +992,7 @@ async function loadNotInterestedInsights(allJQs) {
       });
       fetched++;
       document.getElementById("insights-subtitle").textContent =
-        "Analyzed " + fetched + "/" + topJQs.length + " JQs · " + summaries.length + " call summaries found...";
+        "Analyzed " + fetched + "/" + topJQs.length + " JQs · " + summaries.length + " call summaries found…";
     } catch(e) {
       fetched++;
       console.error("Insights fetch error:", e);
@@ -698,20 +1004,18 @@ async function loadNotInterestedInsights(allJQs) {
 
   if(summaries.length === 0) {
     document.getElementById("insights-body").innerHTML =
-      '<div style="color:#99aabb;font-size:13px;text-align:center">No AI call summaries found for NOT_INTERESTED workers</div>';
+      '<div style="color:var(--muted);font-size:13px;text-align:center">No AI call summaries found for NOT_INTERESTED workers</div>';
     document.getElementById("insights-subtitle").textContent = "No data available";
     return;
   }
 
   document.getElementById("insights-subtitle").textContent =
-    "Analyzing " + summaries.length + " call summaries with AI...";
+    "Analyzing " + summaries.length + " call summaries…";
 
-  // Send to Claude AI for clustering
   await analyzeWithClaude(summaries, topJQs.length);
 }
 
 async function analyzeWithClaude(summaries, jqCount) {
-  // Keyword-based clustering - no API needed
   const patterns = [
     {reason: "Not interested in job role/opportunity", keys: ["not interested in the job","not interested in this job","not interested in the role","did not show interest in the role","not interested in the opportunity","not interested in joining"]},
     {reason: "Salary/compensation too low", keys: ["salary","pay","compensation","wage","income","stipend","low pay","not satisfied with salary","salary expectation","salary not matching"]},
@@ -742,10 +1046,8 @@ async function analyzeWithClaude(summaries, jqCount) {
     if(!matched) unmatched.push(s);
   });
 
-  // Sort by count
   counts.sort((a,b) => b.count - a.count);
 
-  // Add unmatched as "Other reasons"
   if(unmatched.length > 0) {
     counts.push({reason: "Other / unclear reasons", count: unmatched.length, keys: [], examples: unmatched.slice(0,2)});
   }
@@ -757,7 +1059,7 @@ async function analyzeWithClaude(summaries, jqCount) {
       rank: i+1,
       reason: r.reason,
       count: r.count,
-      detail: r.examples[0] ? r.examples[0].substring(0,100)+"..." : ""
+      detail: r.examples[0] ? r.examples[0].substring(0,100)+"…" : ""
     }));
 
   renderInsights(reasons, summaries.length, jqCount);
@@ -765,17 +1067,17 @@ async function analyzeWithClaude(summaries, jqCount) {
 
 function renderInsights(reasons, totalSummaries, jqCount) {
   const maxCount = reasons[0] ? reasons[0].count : 1;
-  let html = '<div>';
+  let html = '<div style="width:100%">';
   reasons.slice(0, 10).forEach(function(r) {
     const pct = Math.round(r.count / totalSummaries * 100);
     const barWidth = Math.round(r.count / maxCount * 100);
-    html += '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eef2fa">';
-    html += '<div style="font-size:16px;font-weight:800;color:#003399;min-width:24px;text-align:center">'+r.rank+'</div>';
-    html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-size:13px;font-weight:600;color:#1a2a3a">'+r.reason+'</div>';
-    html += '<div style="height:3px;background:#e0e8f4;border-radius:2px;margin-top:4px"><div style="height:100%;background:#003399;border-radius:2px;width:'+barWidth+'%"></div></div>';
+    html += '<div class="ins-row">';
+    html += '<div class="ins-rank">'+r.rank+'</div>';
+    html += '<div class="ins-body">';
+    html += '<div class="ins-reason">'+r.reason+'</div>';
+    html += '<div class="ins-bar"><div class="ins-bar-fill" style="width:'+barWidth+'%"></div></div>';
     html += '</div>';
-    html += '<div style="font-size:12px;color:#7799bb;white-space:nowrap;text-align:right"><b>'+r.count+'</b><br>'+pct+'%</div>';
+    html += '<div class="ins-meta"><b>'+r.count+'</b><br>'+pct+'%</div>';
     html += '</div>';
   });
   html += '</div>';
@@ -789,7 +1091,7 @@ function renderInsights(reasons, totalSummaries, jqCount) {
   document.getElementById("insights-subtitle").textContent =
     "Based on " + totalSummaries + " AI call summaries across " + jqCount + " JQs";
   document.getElementById("insights-footer").style.display = "block";
-  document.getElementById("insights-footer").textContent = "Keyword analysis · Updates on refresh";
+  document.getElementById("insights-footer").textContent = "Keyword analysis · updates on refresh";
 }
 
 function toggle(i){selected=selected===i?-1:i;renderTable(allData);}
@@ -799,7 +1101,7 @@ function renderPagination(totalPages){
   let start=Math.max(1,Math.min(page-3,totalPages-6));
   for(let p=start;p<=Math.min(start+6,totalPages);p++)html+='<button class="page-btn'+(p===page?" active":"")+'" onclick="goPage('+p+')">'+p+'</button>';
   html+='<button class="page-btn" onclick="goPage('+(page+1)+')" '+(page===totalPages?"disabled":"")+'>→</button>';
-  html+='<span style="font-size:12px;color:#99aabb;margin-left:4px">'+page+' / '+totalPages+'</span>';
+  html+='<span style="font-size:12px;color:var(--muted);margin-left:6px;font-variant-numeric:tabular-nums">'+page+' / '+totalPages+'</span>';
   document.getElementById("pagination").innerHTML=html;
 }
 function goPage(p){page=p;selected=-1;load();}
@@ -817,12 +1119,12 @@ function setStatus(s){
   document.getElementById("btn-recruiter").className="status-btn";
   load();
 }
-function refreshAll(){load();loadAll().then((allJQs)=>{loadAllQualify();if(currentView==="recruiter")renderRecruiterView();if(allJQsCache.length)loadNotInterestedInsights(allJQsCache);});}
+function refreshAll(){load();loadAll().then(()=>{loadAllQualify();if(currentView==="recruiter")renderRecruiterView();if(allJQsCache.length)loadNotInterestedInsights(allJQsCache);});}
 function toggleToken(){const bar=document.getElementById("token-bar");bar.classList.toggle("open");if(bar.classList.contains("open"))document.getElementById("token-input").focus();}
 function updateToken(){const t=document.getElementById("token-input").value.trim();if(t){alert("Update the TOKEN variable in proxy-bluedart.py and restart.");document.getElementById("token-bar").classList.remove("open");}}
-function toggleAutoRefresh(){autoEnabled=!autoEnabled;document.getElementById("auto-label").textContent=autoEnabled?"Auto — every hour":"Auto — off";if(autoEnabled)autoTimer=setInterval(refreshAll,3600000);else clearInterval(autoTimer);}
+function toggleAutoRefresh(){autoEnabled=!autoEnabled;const el=document.getElementById("auto-label");el.textContent=autoEnabled?"Auto · every hour":"Auto · off";el.classList.toggle("off",!autoEnabled);if(autoEnabled)autoTimer=setInterval(refreshAll,3600000);else clearInterval(autoTimer);}
 autoTimer=setInterval(refreshAll,3600000);
-load();loadAll().then((allJQs)=>{loadAllQualify();if(currentView==="recruiter")renderRecruiterView();if(allJQsCache.length)loadNotInterestedInsights(allJQsCache);});
+load();loadAll().then(()=>{loadAllQualify();if(currentView==="recruiter")renderRecruiterView();if(allJQsCache.length)loadNotInterestedInsights(allJQsCache);});
 </script>
 </body>
 </html>
